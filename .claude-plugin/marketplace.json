@@ -1,0 +1,12 @@
+{
+  "name": "claude-dev-kit",
+  "owner": { "name": "ngoc.nguyenquang" },
+  "metadata": { "description": "Personal Claude Code working kit: hooks, skills, agents and commands." },
+  "plugins": [
+    {
+      "name": "dev-kit",
+      "source": "./plugins/dev-kit",
+      "description": "Portable working kit: guard hooks, plan/debug/tdd/review skills, GitHub issue to PR workflow."
+    }
+  ]
+}
