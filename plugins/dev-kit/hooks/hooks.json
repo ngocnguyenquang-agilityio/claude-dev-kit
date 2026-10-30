@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs\""
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs"]
           }
         ]
       }
@@ -16,7 +17,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/package-manager-guard.mjs\""
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/package-manager-guard.mjs"]
           }
         ]
       },
@@ -25,7 +27,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/safety-guard.mjs\"",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/safety-guard.mjs"],
             "onFailure": "block"
           }
         ]
@@ -37,7 +40,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/format-file.mjs\""
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/format-file.mjs"]
           }
         ]
       }
@@ -47,7 +51,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/notify.mjs\""
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/notify.mjs"]
           }
         ]
       }
@@ -57,7 +62,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-checks.mjs\"",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/stop-checks.mjs"],
             "timeout": 300
           }
         ]

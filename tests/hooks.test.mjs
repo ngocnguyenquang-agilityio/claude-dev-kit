@@ -545,17 +545,24 @@ describe("notify", () => {
 describe("hooks.json", () => {
   const { hooks } = JSON.parse(fs.readFileSync(path.join(hooksDir, "hooks.json"), "utf8"));
   const handlers = (event) => hooks[event].flatMap((group) => group.hooks);
+  const script = (handler) => path.basename(handler.args[0]);
+
+  it("runs every hook as node plus a script argument, with no shell", () => {
+    for (const handler of Object.keys(hooks).flatMap(handlers)) {
+      assert.equal(handler.command, "node");
+      assert.equal(handler.args.length, 1);
+      assert.match(handler.args[0], /^\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/[\w-]+\.mjs$/);
+      assert.ok(fs.existsSync(path.join(hooksDir, script(handler))), handler.args[0]);
+    }
+  });
 
   it("blocks the tool call when the safety guard itself fails", () => {
-    const guard = handlers("PreToolUse").find((handler) => handler.command.includes("safety-guard.mjs"));
+    const guard = handlers("PreToolUse").find((handler) => script(handler) === "safety-guard.mjs");
 
     assert.equal(guard.onFailure, "block");
   });
 
   it("runs only stop-checks on Stop, so a failing check sends no parallel notification", () => {
-    assert.deepEqual(
-      handlers("Stop").map((handler) => path.basename(handler.command.replace(/"/g, ""))),
-      ["stop-checks.mjs"],
-    );
+    assert.deepEqual(handlers("Stop").map(script), ["stop-checks.mjs"]);
   });
 });
