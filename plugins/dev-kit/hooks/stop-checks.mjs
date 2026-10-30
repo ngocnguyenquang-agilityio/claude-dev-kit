@@ -4,7 +4,7 @@
 // from package.json scripts; `stopChecks` in .claude/kit.json picks a subset.
 // The "finished" notification is sent here, and only when Claude really stops:
 // a separate Stop hook would run in parallel and fire even when a check fails.
-import { loadConfig, readStdinJson, run, scriptWords, sendNotification, tail } from "./lib.mjs";
+import { fileArgument, loadConfig, readStdinJson, run, scriptWords, sendNotification, tail } from "./lib.mjs";
 
 function finish() {
   sendNotification("Finished. Your turn.");
@@ -31,7 +31,7 @@ for (let i = 0; i < entries.length; i++) {
   const file = entry.slice(3);
   if (/[RC]/.test(status)) i++;
   if (CODE.test(file) || /(^|\/)tsconfig\.json$/.test(file)) codeChanged = true;
-  if (CODE.test(file) && !status.includes("D")) changed.push(file);
+  if (CODE.test(file) && !status.includes("D")) changed.push(fileArgument(file));
 }
 if (!codeChanged) finish();
 

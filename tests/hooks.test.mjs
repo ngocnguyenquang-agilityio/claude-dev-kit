@@ -95,6 +95,12 @@ function recordedArgs(project) {
   return JSON.parse(fs.readFileSync(path.join(project, "tool-args.json"), "utf8"));
 }
 
+// The recorded argument that names `file`: not an option, and resolving to it.
+function assertFileArgument(project, argument, file) {
+  assert.doesNotMatch(argument, /^-/);
+  assert.equal(path.resolve(project, argument), path.join(project, file));
+}
+
 after(() => projects.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 
 describe("kit-config", () => {
@@ -446,6 +452,13 @@ describe("stop-checks", () => {
     assert.deepEqual(recordedArgs(project), ["related", "--run", "--passWithNoTests", HOSTILE_NAME]);
   });
 
+  it("passes a changed file starting with '-' to Jest as a file, not an option", () => {
+    const project = projectWithRecordingTool("jest", { "--config=evil.ts": "x" }, { git: true });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assertFileArgument(project, recordedArgs(project)[1], "--config=evil.ts");
+  });
+
   it("skips related tests when kit.json names a package manager the kit doesn't know", () => {
     const files = { "src/a.ts": "x", ".claude/kit.json": { packageManager: "deno" } };
     const project = projectWithRecordingTool("jest", files, { git: true });
@@ -491,6 +504,13 @@ describe("format-file", () => {
 
     assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: HOSTILE_NAME } }).code, 0);
     assert.deepEqual(recordedArgs(project), ["--fix", "--no-warn-ignored", path.normalize(HOSTILE_NAME)]);
+  });
+
+  it("passes a file name starting with '-' to Prettier as a file, not an option", () => {
+    const project = projectWithRecordingTool("prettier", { "--config=evil.ts": "x" });
+
+    assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: "--config=evil.ts" } }).code, 0);
+    assertFileArgument(project, recordedArgs(project).at(-1), "--config=evil.ts");
   });
 
   it("does nothing when kit.json names a package manager the kit doesn't know", () => {

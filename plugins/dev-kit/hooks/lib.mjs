@@ -66,6 +66,12 @@ export function run(words) {
   return { ok: result.status === 0, output: output.trim(), stdout: result.stdout ?? "" };
 }
 
+// A relative path for a tool's command line. A name starting with "-" (say
+// "--config=x.js") would be read as an option; "./" keeps it a file.
+export function fileArgument(file) {
+  return file.startsWith("-") ? `./${file}` : file;
+}
+
 // Keep feedback short: the end of a long log is the useful part.
 export function tail(text, max = 4000) {
   return text.length > max ? `...\n${text.slice(-max)}` : text;
