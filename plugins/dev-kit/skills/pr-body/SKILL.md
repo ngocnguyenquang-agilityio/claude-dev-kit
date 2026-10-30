@@ -1,6 +1,6 @@
 ---
 name: pr-body
-description: Draft a pull request description for the current branch (print only)
+description: Draft a pull request title and description for the current branch, printed for the user to paste. Use when the branch is ready for a PR.
 argument-hint: "[target branch]"
 allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 disable-model-invocation: true
