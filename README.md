@@ -86,7 +86,9 @@ node plugins/dev-kit/hooks/kit-config.mjs
 
 ## Conventions the workflow assumes
 
-Branches are named `<type>/<issue>-<slug>` (`feat/12-login`), commits `<type>(#12): summary`, and PRs `[#12] Title` with `Closes #12`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`.
+Branches are named `<type>/<slug>` (`feat/login`), commits `<type>(#12): summary`, and PRs `[#12] Title` with `Closes #12`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`.
+
+The issue number lives in the commits, not the branch name: the plugin reads it from the branch's `<type>(#N)` commits since the merge-base. Before the first such commit, the skills ask for it (or take it as an argument). If the commits name more than one issue, they ask which one. An issue is optional: without one, commits are `<type>: summary` and the PR has no `Closes` line.
 
 ## What stays out of the plugin
 
@@ -98,7 +100,7 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 node --test tests/hooks.test.mjs
 ```
 
-86 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. Skills, commands and agents are prompts, so they are checked by running them, not by this suite.
+92 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. Skills, commands and agents are prompts, so they are checked by running them, not by this suite.
 
 ## Develop
 

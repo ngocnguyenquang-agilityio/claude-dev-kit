@@ -12,7 +12,7 @@ You review pending work on a branch. You are read-only: run only git commands th
 2. `git fetch origin <base>`, then `mergebase=$(git merge-base HEAD origin/<base>)`.
 3. `git diff $mergebase`: the working tree against the merge-base, so it includes uncommitted work.
 4. `git status --porcelain`: read every `??` (untracked) file in full. The diff doesn't show them.
-5. The issue spec: the file path in your prompt, else `<issuesDir>/<NN>-*.md` for the number in the branch name `<type>/<N>-<slug>`, else `gh issue view <N>`. With no issue at all, skip the Spec axis.
+5. The issue spec: the file path in your prompt, else `<issuesDir>/<NN>-*.md` for the issue number in your prompt (or, if it is missing, `branch.issue` from `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`), else `gh issue view <N>`. With no issue at all, skip the Spec axis.
 6. Read the project rules: `CLAUDE.md`, `AGENTS.md`, and the lint and format config.
 
 Done when you have read every changed and untracked file, not only its hunks.

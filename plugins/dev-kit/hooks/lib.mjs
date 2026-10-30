@@ -115,7 +115,10 @@ const SCRIPT_NAMES = {
   formatCheck: ["format:check", "format-check", "check-format"],
 };
 
-export const BRANCH_PATTERN = /^(feat|fix|chore|docs|test|refactor)\/(\d+)-(.+)$/;
+// `<type>/<slug>`. The issue number is not in the branch name; it comes from
+// the branch's commits (see issuesFromCommits).
+export const BRANCH_PATTERN = /^(feat|fix|chore|docs|test|refactor)\/(.+)$/;
+const COMMIT_ISSUE = /^(?:feat|fix|chore|docs|test|refactor)\(#(\d+)\):/;
 
 // Everything the hooks and skills need to know about the current project.
 // Detected from lockfiles and package.json, then overridden by the optional
@@ -169,6 +172,21 @@ export function detectBaseBranch(config) {
     if (run(`git rev-parse --verify --quiet origin/${candidate}`).ok) return candidate;
   }
   return "main";
+}
+
+// Issue numbers from this branch's `<type>(#N): ...` commit subjects, oldest
+// first, without repeats. More than one means the branch mixes issues.
+export function issuesFromCommits(baseBranch) {
+  // The name comes from the repo (kit.json or origin/HEAD) and goes into a
+  // shell, and hooks run without asking: a cloned repo must not run commands.
+  if (!/^[\w./-]+$/.test(baseBranch)) return [];
+  // A repo without a remote still has a local base branch.
+  const base = [`origin/${baseBranch}`, baseBranch].find((ref) => run(`git rev-parse --verify --quiet ${ref}`).ok);
+  const mergeBase = base && run(`git merge-base HEAD ${base}`);
+  if (!mergeBase?.ok) return [];
+  const subjects = run(`git log --reverse --format=%s ${mergeBase.output}..HEAD`).output.split("\n");
+  const numbers = subjects.map((subject) => subject.match(COMMIT_ISSUE)?.[1]).filter(Boolean).map(Number);
+  return [...new Set(numbers)];
 }
 
 // Shell commands inside a Bash/PowerShell call, as arrays of words. Heredoc

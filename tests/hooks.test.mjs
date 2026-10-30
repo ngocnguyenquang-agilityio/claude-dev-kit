@@ -47,6 +47,18 @@ function runHookWithNotifications(hook, project, input = {}, env = {}) {
   return { ...result, notifications };
 }
 
+// A project on `branch`, cut from a `main` that holds `baseSubjects`, with one
+// empty commit per entry of `subjects` on the branch.
+function branchWithCommits(branch, subjects, baseSubjects = []) {
+  const project = makeProject({ "package.json": {} }, { git: true });
+  const git = (...args) => spawnSync("git", args, { cwd: project });
+  git("symbolic-ref", "HEAD", "refs/heads/main");
+  for (const subject of ["init", ...baseSubjects]) git("commit", "-q", "--allow-empty", "-m", subject);
+  git("checkout", "-q", "-b", branch);
+  for (const subject of subjects) git("commit", "-q", "--allow-empty", "-m", subject);
+  return project;
+}
+
 const bash = (command) => ({ tool_name: "Bash", tool_input: { command } });
 const pnpmProject = () =>
   makeProject({
@@ -86,14 +98,51 @@ describe("kit-config", () => {
     assert.equal(config.issuesDir, "specs");
   });
 
-  it("reads the issue number from a <type>/<N>-<slug> branch", () => {
-    const project = makeProject({ "package.json": {} }, { git: true });
-    spawnSync("git", ["checkout", "-q", "-b", "fix/7-login-crash"], { cwd: project });
+  it("splits a <type>/<slug> branch and knows no issue before the first commit", () => {
+    const { branch, wipNote } = JSON.parse(runHook("kit-config.mjs", branchWithCommits("fix/login-crash", [])).out);
 
-    const { branch, wipNote } = JSON.parse(runHook("kit-config.mjs", project).out);
+    assert.deepEqual(branch, { name: "fix/login-crash", type: "fix", slug: "login-crash", issue: null, issues: [] });
+    assert.equal(wipNote, ".claude/wip/fix-login-crash.md");
+  });
 
-    assert.deepEqual(branch, { name: "fix/7-login-crash", type: "fix", issue: 7, slug: "login-crash" });
-    assert.equal(wipNote, ".claude/wip/fix-7-login-crash.md");
+  it("reads the issue number from the branch's <type>(#N) commits", () => {
+    const project = branchWithCommits("fix/login-crash", ["fix(#7): guard the null user", "test: cover login", "fix(#7): follow-up"]);
+
+    const { branch } = JSON.parse(runHook("kit-config.mjs", project).out);
+
+    assert.equal(branch.issue, 7);
+    assert.deepEqual(branch.issues, [7]);
+  });
+
+  it("reports every number, oldest first, when the commits name more than one issue", () => {
+    const project = branchWithCommits("feat/search", ["feat(#5): add search", "fix(#3): typo", "feat(#5): filter"]);
+
+    const { branch } = JSON.parse(runHook("kit-config.mjs", project).out);
+
+    assert.equal(branch.issue, null);
+    assert.deepEqual(branch.issues, [5, 3]);
+  });
+
+  it("ignores issue commits that are already on the base branch", () => {
+    const project = branchWithCommits("fix/login-crash", [], ["fix(#9): older work"]);
+
+    assert.deepEqual(JSON.parse(runHook("kit-config.mjs", project).out).branch.issues, []);
+  });
+
+  it("never runs a command hidden in the base branch name from kit.json", () => {
+    const project = branchWithCommits("fix/login-crash", ["fix(#7): x"]);
+    fs.mkdirSync(path.join(project, ".claude"));
+    fs.writeFileSync(path.join(project, ".claude", "kit.json"), JSON.stringify({ baseBranch: "main & echo pwned > pwned.txt" }));
+
+    assert.deepEqual(JSON.parse(runHook("kit-config.mjs", project).out).branch.issues, []);
+    assert.equal(fs.existsSync(path.join(project, "pwned.txt")), false);
+  });
+
+  it("reads no number from an old <type>/<N>-<slug> branch name", () => {
+    const { branch } = JSON.parse(runHook("kit-config.mjs", branchWithCommits("fix/7-login-crash", [])).out);
+
+    assert.equal(branch.slug, "7-login-crash");
+    assert.equal(branch.issue, null);
   });
 
   it("reports no package manager for a project without package.json", () => {
@@ -244,6 +293,18 @@ describe("session-start", () => {
     spawnSync("git", ["checkout", "-q", "-b", "feat/3-search"], { cwd: project });
 
     assert.match(runHook("session-start.mjs", project).out, /wire the filter/);
+  });
+
+  it("names the branch's issue from its commits", () => {
+    const project = branchWithCommits("fix/login-crash", ["fix(#7): guard the null user"]);
+
+    assert.match(runHook("session-start.mjs", project).out, /Branch: fix\/login-crash \(issue #7\)/);
+  });
+
+  it("flags a branch whose commits name more than one issue", () => {
+    const project = branchWithCommits("feat/search", ["feat(#5): add search", "fix(#3): typo"]);
+
+    assert.match(runHook("session-start.mjs", project).out, /\(issues #5, #3: conflict\)/);
   });
 
   it("leaves the rules out when sessionStart.rules is false", () => {

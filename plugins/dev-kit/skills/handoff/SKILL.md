@@ -11,9 +11,9 @@ Compact this conversation into one note per branch. `/dev-kit:standup` reads it,
 
 ## Steps
 
-1. Gather: run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"` for `baseBranch` and `wipNote`. Then `git branch --show-current`, `git rev-parse --short HEAD`, `date "+%Y-%m-%d %H:%M"`, `git status --porcelain`, `git diff --stat HEAD`, and `git log --oneline origin/<baseBranch>..HEAD` (the remote ref, because the local one can be stale).
+1. Gather: run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"` for `baseBranch`, `wipNote` and `branch.issue`. Then `git branch --show-current`, `git rev-parse --short HEAD`, `date "+%Y-%m-%d %H:%M"`, `git status --porcelain`, `git diff --stat HEAD`, and `git log --oneline origin/<baseBranch>..HEAD` (the remote ref, because the local one can be stale).
 2. Write the note to the `wipNote` path (`.claude/wip/<branch>.md`, with every `/` in the branch name replaced by `-`; create the folder if needed). Add `.claude/wip/` to `.gitignore` if it is not there. Overwrite the file: one note per branch, always the latest.
-3. Parse `N` from a `<type>/<N>-<slug>` branch name. On any other branch, leave `(#N)` out of the title.
+3. Take `N` from `branch.issue`. When it is `null` (no commit names the issue yet), use the issue number this conversation worked on, for example from `start-issue`; the note carries it to the next session until the first `<type>(#N)` commit does. With no issue, leave `(#N)` out of the title.
 4. Print the path so the user can paste it into a new session.
 
 ## Note format

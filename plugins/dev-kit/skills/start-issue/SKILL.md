@@ -11,8 +11,8 @@ Start issue `#$ARGUMENTS`. Each step ends when its check holds. Run `node "${CLA
 3. **Read the issue.**
    - Run `gh issue view <N>`.
    - If `issuesDir` is set, also read `<issuesDir>/<NN>-*.md` (`NN` is the number zero-padded to two digits). If the two disagree, the GitHub issue wins. Tell the user about the difference.
-4. **Branch.** Pick the type from the issue's main purpose: `feat`, `fix`, `chore`, `docs`, `test` or `refactor` (`feat` when unsure). Pick a 2-4 word kebab-case slug from the issue title. Then run `git checkout -b <type>/<N>-<slug>`. Done when `git branch --show-current` prints that name.
+4. **Branch.** Pick the type from the issue's main purpose: `feat`, `fix`, `chore`, `docs`, `test` or `refactor` (`feat` when unsure). Pick a 2-4 word kebab-case slug from the issue title. Then run `git checkout -b <type>/<slug>`. Done when `git branch --show-current` prints that name. The branch name carries no number: the first commit, `<type>(#N): <summary>`, records the issue for the branch.
 5. **Plan.** Turn every unchecked `[ ]` task (or, with no task list, every requirement in the issue body) into a task-list step. Name the acceptance criteria that will prove the issue done.
 6. **Framework context.** If a task touches an API from a framework whose docs the project bundles or whose version is newer than you know, read those docs before writing code.
 
-Finish by telling the user the branch name, the type you chose and why, and the plan. Then wait for a go-ahead before implementing.
+Finish by telling the user the branch name, the type you chose and why, the issue number `#N` (so the first commit and a `handoff` note can carry it), and the plan. Then wait for a go-ahead before implementing.
