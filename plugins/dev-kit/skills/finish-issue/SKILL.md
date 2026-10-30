@@ -2,11 +2,14 @@
 name: finish-issue
 description: Wrap up the current issue branch for a PR. Runs the checks and the reviewer agent, updates the issue status docs, and hands the user the commit, push and PR commands. Use when the work on an issue is done, or before asking to commit.
 argument-hint: "[issue number]"
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 ---
 
 Bring the current `<type>/<slug>` branch to a ready-to-commit state. You commit, push and open the PR only after the user says yes to each one, in the moment.
 
-1. **Identify.** Run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`.
+Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
+
+1. **Identify.** From the config:
    - **Type**: `branch.type`. If it is `null` (the branch isn't `<type>/<slug>`), ask the user for the type.
    - **Issue `N`**, the first of these that gives one:
      - `branch.issue`: set when the branch's commits name exactly one issue as `<type>(#N): ...`.

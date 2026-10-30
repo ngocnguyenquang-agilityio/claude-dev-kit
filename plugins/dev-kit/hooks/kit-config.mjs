@@ -1,6 +1,7 @@
-// Print the resolved dev-kit config for this project as JSON. Skills and
-// commands call this instead of guessing the package manager, base branch or
-// check commands: `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`.
+// Print the resolved dev-kit config for this project as JSON, instead of
+// guessing the package manager, base branch or check commands. Skills inject
+// it with !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`; the reviewer
+// agent, which has no injection, runs that command itself.
 import { BRANCH_PATTERN, detectBaseBranch, issuesFromCommits, loadConfig, run, scriptCommand } from "./lib.mjs";
 
 const config = loadConfig();

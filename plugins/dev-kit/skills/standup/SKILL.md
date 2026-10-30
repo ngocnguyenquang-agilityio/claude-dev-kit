@@ -1,4 +1,5 @@
 ---
+name: standup
 description: Write my standup (Yesterday / Today / Blockers) from my git commits, my GitHub PRs and issues, and the handoff notes.
 argument-hint: "[since, e.g. 3 days]"
 allowed-tools: Bash(git config user.email), Bash(git log:*), Bash(date:*), Bash(gh pr list:*), Bash(gh issue list:*), Read, Glob

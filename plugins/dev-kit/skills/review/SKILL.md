@@ -1,6 +1,7 @@
 ---
 name: review
 description: Review all pending changes before reporting work done. Use after finishing code changes and before handing over commit commands.
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 ---
 
 # Review
@@ -9,7 +10,8 @@ Review everything pending, committed or not. Run it once at the end of a unit of
 
 ## Gather
 
-- **Config**: run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`. It gives `baseBranch`, the `checks` commands, `issuesDir` and the branch's issue number.
+- **Config**: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
+  It gives `baseBranch`, the `checks` commands, `issuesDir` and the branch's issue number.
 - **Fixed point**: `git fetch origin <baseBranch>`, then `git merge-base HEAD origin/<baseBranch>` (the remote ref, because the local one can be stale).
 - **Diff**: `git diff <merge-base>` (working tree vs merge-base, so uncommitted work is included).
 - **New files**: `git status --porcelain`; read untracked files directly.

@@ -306,6 +306,124 @@ describe("safety-guard", () => {
     assert.equal(runHook("safety-guard.mjs", relaxed, bash("git push")).out, "");
     assert.equal(runHook("safety-guard.mjs", relaxed, bash("cat .env")).code, 2);
   });
+
+  const fromReviewer = (command) => ({ ...bash(command), agent_type: "dev-kit:reviewer" });
+
+  for (const command of [
+    "git fetch origin main",
+    "mergebase=$(git merge-base HEAD origin/main)",
+    "git diff $(git merge-base HEAD origin/main)",
+    "mergebase=$(git merge-base HEAD origin/main) && git diff ${mergebase} --stat",
+    "git diff -- \"src/(app)/page.tsx\"",
+    "grep -n \"a\\|b\" src/a.ts",
+    "git status --porcelain",
+    "git log --oneline -5 && git show HEAD --stat",
+    "git symbolic-ref --short refs/remotes/origin/HEAD",
+    "git branch --show-current",
+    "git diff HEAD 2>/dev/null | head -50",
+    "node \"/plugins/dev-kit/hooks/kit-config.mjs\"",
+    "node \"${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs\"",
+    "git symbolic-ref --short refs/remotes/origin/HEAD | cut -d/ -f2-",
+    "git -C sub log -3",
+    "git --no-pager log -3",
+    "git diff 2>&1",
+    "pnpm test 2>&1 | tail -20",
+    "git diff &> /dev/null",
+    "pnpm -r test",
+    "pnpm --filter app test",
+    "git branch -a",
+    "git grep -n TODO",
+    "git stash list",
+    "gh issue view 12",
+    "gh pr diff 3",
+    "pnpm run lint",
+    "pnpm typecheck",
+    "pnpm test",
+    "cat src/a.ts",
+  ]) {
+    it(`lets the reviewer run "${command}"`, () => {
+      assert.deepEqual(runHook("safety-guard.mjs", project, fromReviewer(command)), { code: 0, out: "", err: "" });
+    });
+  }
+
+  for (const command of [
+    "git commit -m x",
+    "git add .",
+    "git checkout -- src/a.ts",
+    "git stash",
+    "git branch new-branch",
+    "git symbolic-ref HEAD refs/heads/other",
+    "git diff > out.patch",
+    "git diff --output=out.patch",
+    "git -c core.pager=touch log",
+    "git diff `rm src/a.ts`",
+    "pnpm run lint --fix",
+    "pnpm test -u",
+    "echo hi >| out",
+    "echo hi >&out",
+    "cat <<EOF; touch x\nhello\nEOF",
+    "cat <<< x\ntouch y",
+    "echo @'a'; touch z; echo 'b'@",
+    "echo \\\" > marker; echo \"x\"",
+    "git symbolic-ref -d refs/remotes/origin/HEAD",
+    "git fetch origin +main:refs/heads/main",
+    "git fetch --upload-pack=./x.sh origin",
+    "git --git-dir=/tmp/x diff",
+    "git diff --ext-diff",
+    "NODE_OPTIONS=--import=./evil.mjs node kit-config.mjs",
+    "GIT_EXTERNAL_DIFF=./x.sh git diff",
+    "sudo git diff",
+    "gh pr view 3 --web",
+    "echo $'\\'' > f ; echo ''",
+    "git diff $(echo --output=pwn.txt)",
+    "opts=$(echo --output=pwn.txt); git diff $opts",
+    "git diff $mergebase",
+    "git diff $(git merge-base --fork-point main)",
+    "pnpm test $(echo --fix)",
+    "pnpm lint -o out.txt",
+    "pnpm typecheck --outDir dist2",
+    "pnpm typecheck src/a.ts",
+    "echo a #'\ntouch marker\n#'",
+    "echo a #\"\ntouch marker\n#\"",
+    "echo hi >&1file",
+    "echo hi 2>&1out",
+    "gh pr view 3 --web=true",
+    "./git status",
+    "node ../evil/kit-config.mjs",
+    "git status && rm src/a.ts",
+    "sed -i s/a/b/ src/a.ts",
+    "node -e \"require('fs').writeFileSync('x', '')\"",
+    "pnpm install",
+    "pnpm run build",
+    "gh issue comment 12 --body x",
+    "gh api repos/o/r/issues -f title=x",
+  ]) {
+    it(`blocks the reviewer from running "${command}"`, () => {
+      const result = runHook("safety-guard.mjs", project, fromReviewer(command));
+
+      assert.equal(result.code, 2);
+      assert.match(result.err, /reviewer is read-only/);
+    });
+  }
+
+  it("guards the reviewer's PowerShell calls too", () => {
+    const powershell = (command) => ({ tool_name: "PowerShell", tool_input: { command }, agent_type: "dev-kit:reviewer" });
+
+    assert.equal(runHook("safety-guard.mjs", project, powershell("git diff")).code, 0);
+    assert.equal(runHook("safety-guard.mjs", project, powershell("Set-Content src/a.ts x")).code, 2);
+  });
+
+  it("still blocks the reviewer from reading a secret, as a secret", () => {
+    assert.match(runHook("safety-guard.mjs", project, fromReviewer("cat .env")).err, /secret file/);
+  });
+
+  for (const agentType of [undefined, "Explore", "reviewer", "dev-kit:other"]) {
+    it(`leaves commands from agent type ${agentType} to the usual rules`, () => {
+      const input = { ...bash("rm file.txt"), agent_type: agentType };
+
+      assert.deepEqual(runHook("safety-guard.mjs", project, input), { code: 0, out: "", err: "" });
+    });
+  }
 });
 
 describe("session-start", () => {
@@ -472,6 +590,57 @@ describe("stop-checks", () => {
 
     assert.deepEqual(result.notifications, []);
   });
+
+  // Checks that log each run to runs.log, which is not a code file.
+  const counting = (exitCode) => `node -e "require('fs').appendFileSync('runs.log','x'); process.exit(${exitCode})"`;
+  const runCount = (project) => fs.readFileSync(path.join(project, "runs.log"), "utf8").length;
+
+  it("runs the checks once while the tree stays as it was when they passed", () => {
+    const project = withScripts({ typecheck: counting(0) });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.equal(runCount(project), 1);
+  });
+
+  it("runs the checks again after an untracked code file changes", () => {
+    const project = withScripts({ typecheck: counting(0) });
+    runHook("stop-checks.mjs", project, {});
+    fs.appendFileSync(path.join(project, "src/a.ts"), "export const b = 2;\n");
+
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 2);
+  });
+
+  it("runs the checks again after a tracked file changes", () => {
+    const project = withScripts({ typecheck: counting(0) }, { ".gitignore": "runs.log\n" });
+    spawnSync("git", ["add", "."], { cwd: project });
+    spawnSync("git", ["commit", "-qm", "init"], { cwd: project });
+    fs.appendFileSync(path.join(project, "src/a.ts"), "export const b = 2;\n");
+    runHook("stop-checks.mjs", project, {});
+    fs.appendFileSync(path.join(project, "src/a.ts"), "export const c = 3;\n");
+
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 2);
+  });
+
+  it("runs the checks again when the check commands change", () => {
+    const project = withScripts({ typecheck: counting(0), lint: counting(0) });
+    runHook("stop-checks.mjs", project, {});
+    fs.mkdirSync(path.join(project, ".claude"));
+    fs.writeFileSync(path.join(project, ".claude", "kit.json"), JSON.stringify({ stopChecks: ["lint"] }));
+
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 3);
+  });
+
+  it("never caches a failing run", () => {
+    const project = withScripts({ typecheck: counting(1) });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 2);
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 2);
+    assert.equal(runCount(project), 2);
+  });
 });
 
 describe("format-file", () => {
@@ -545,17 +714,24 @@ describe("notify", () => {
 describe("hooks.json", () => {
   const { hooks } = JSON.parse(fs.readFileSync(path.join(hooksDir, "hooks.json"), "utf8"));
   const handlers = (event) => hooks[event].flatMap((group) => group.hooks);
+  const script = (handler) => path.basename(handler.args[0]);
+
+  it("runs every hook as node plus a script argument, with no shell", () => {
+    for (const handler of Object.keys(hooks).flatMap(handlers)) {
+      assert.equal(handler.command, "node");
+      assert.equal(handler.args.length, 1);
+      assert.match(handler.args[0], /^\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/[\w-]+\.mjs$/);
+      assert.ok(fs.existsSync(path.join(hooksDir, script(handler))), handler.args[0]);
+    }
+  });
 
   it("blocks the tool call when the safety guard itself fails", () => {
-    const guard = handlers("PreToolUse").find((handler) => handler.command.includes("safety-guard.mjs"));
+    const guard = handlers("PreToolUse").find((handler) => script(handler) === "safety-guard.mjs");
 
     assert.equal(guard.onFailure, "block");
   });
 
   it("runs only stop-checks on Stop, so a failing check sends no parallel notification", () => {
-    assert.deepEqual(
-      handlers("Stop").map((handler) => path.basename(handler.command.replace(/"/g, ""))),
-      ["stop-checks.mjs"],
-    );
+    assert.deepEqual(handlers("Stop").map(script), ["stop-checks.mjs"]);
   });
 });

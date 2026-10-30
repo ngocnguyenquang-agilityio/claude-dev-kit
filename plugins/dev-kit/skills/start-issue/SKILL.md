@@ -2,9 +2,12 @@
 name: start-issue
 description: Start work on a GitHub issue. Creates its branch from an up-to-date base branch and loads its tasks as the plan. Use when the user asks to start or pick up an issue by number, or from the hotfix flow.
 argument-hint: <issue number>
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 ---
 
-Start issue `#$ARGUMENTS`. Each step ends when its check holds. Run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"` first for `baseBranch` and `issuesDir`.
+Start issue `#$ARGUMENTS`. Each step ends when its check holds. `baseBranch` and `issuesDir` come from the config.
+
+Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
 
 1. **Clean tree.** `git status --porcelain` lists nothing except this issue's own docs, left uncommitted by `/dev-kit:new-issue`: `<issuesDir>/<NN>-*.md` and `<issuesDir>/README.md`. Those carry over to the new branch and get committed with the issue. If anything else shows up, stop and ask the user what to do with it.
 2. **Up-to-date base.** Run `git fetch origin <baseBranch>`. Then `git checkout <baseBranch>` and `git merge --ff-only origin/<baseBranch>`. Done when `git rev-parse <baseBranch>` equals `git rev-parse origin/<baseBranch>`. If the fast-forward fails, stop and tell the user: the local base has diverged.
