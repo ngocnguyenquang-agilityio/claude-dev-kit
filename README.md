@@ -1,6 +1,6 @@
 # claude-dev-kit
 
-A Claude Code plugin marketplace with one plugin, `dev-kit`: a portable version of a personal working kit (rules, skills, agents, commands and hooks). It adapts to each project by itself.
+A Claude Code plugin marketplace with one plugin, `dev-kit`: a portable version of a personal working kit (rules, skills, agents and hooks). It adapts to each project by itself.
 
 ## Install
 
@@ -48,8 +48,10 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | `pr-feedback` | Triage and address review comments. |
 | `ci-fix` | Read the failed job, reproduce locally, fix. |
 | `release` | Changelog, version bump and release commands. |
+| `commit-msg`, `pr-body` | Draft a commit message or PR description (print only). |
+| `standup` | Yesterday / Today / Blockers from your commits, PRs and handoff notes. |
 
-**Commands:** `/dev-kit:commit-msg`, `/dev-kit:pr-body`, `/dev-kit:standup`.
+Skills that need the project's config get it injected when they load (`` !`node .../kit-config.mjs` ``), so Claude never has to remember to run it.
 
 **Agents:** `reviewer` (read-only pre-commit review), `ui-verifier` (mobile/desktop, light/dark check in the built-in browser).
 
@@ -112,7 +114,7 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 node --test tests/hooks.test.mjs
 ```
 
-193 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. Skills, commands and agents are prompts, so they are checked by running them, not by this suite.
+193 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. Skills and agents are prompts, so they are checked by running them, not by this suite.
 
 ## Develop
 

@@ -2,11 +2,14 @@
 name: new-issue
 description: Draft a new issue (as a spec file when the project keeps them, else in chat), then create it on GitHub after a yes. Use when the user asks to file, open or draft an issue, or when hotfix finds a bug that has no issue yet.
 argument-hint: <what the issue is about>
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 ---
 
 Draft an issue for: $ARGUMENTS
 
-Run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"` first. If `issuesDir` is set, the project keeps issue specs as files and steps 2 to 4 write one. If it is `null`, draft the same sections in chat and skip the file and index.
+Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
+
+If `issuesDir` in the config is set, the project keeps issue specs as files and steps 2 to 4 write one. If it is `null`, draft the same sections in chat and skip the file and index.
 
 1. **Number.** Only when writing a file. Use the next free GitHub number: check `gh issue list --state all -L 1` and `gh pr list --state all -L 1`, because issues and PRs share the counter, and take the higher one plus one. GitHub assigns the real number, and step 5 reconciles it.
 2. **Draft.** Use exactly these `##` sections, in this order. Copy the tone and granularity of the most recent issue file when there is one.
