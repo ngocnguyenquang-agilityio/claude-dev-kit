@@ -472,6 +472,57 @@ describe("stop-checks", () => {
 
     assert.deepEqual(result.notifications, []);
   });
+
+  // Checks that log each run to runs.log, which is not a code file.
+  const counting = (exitCode) => `node -e "require('fs').appendFileSync('runs.log','x'); process.exit(${exitCode})"`;
+  const runCount = (project) => fs.readFileSync(path.join(project, "runs.log"), "utf8").length;
+
+  it("runs the checks once while the tree stays as it was when they passed", () => {
+    const project = withScripts({ typecheck: counting(0) });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.equal(runCount(project), 1);
+  });
+
+  it("runs the checks again after an untracked code file changes", () => {
+    const project = withScripts({ typecheck: counting(0) });
+    runHook("stop-checks.mjs", project, {});
+    fs.appendFileSync(path.join(project, "src/a.ts"), "export const b = 2;\n");
+
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 2);
+  });
+
+  it("runs the checks again after a tracked file changes", () => {
+    const project = withScripts({ typecheck: counting(0) }, { ".gitignore": "runs.log\n" });
+    spawnSync("git", ["add", "."], { cwd: project });
+    spawnSync("git", ["commit", "-qm", "init"], { cwd: project });
+    fs.appendFileSync(path.join(project, "src/a.ts"), "export const b = 2;\n");
+    runHook("stop-checks.mjs", project, {});
+    fs.appendFileSync(path.join(project, "src/a.ts"), "export const c = 3;\n");
+
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 2);
+  });
+
+  it("runs the checks again when the check commands change", () => {
+    const project = withScripts({ typecheck: counting(0), lint: counting(0) });
+    runHook("stop-checks.mjs", project, {});
+    fs.mkdirSync(path.join(project, ".claude"));
+    fs.writeFileSync(path.join(project, ".claude", "kit.json"), JSON.stringify({ stopChecks: ["lint"] }));
+
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 3);
+  });
+
+  it("never caches a failing run", () => {
+    const project = withScripts({ typecheck: counting(1) });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 2);
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 2);
+    assert.equal(runCount(project), 2);
+  });
 });
 
 describe("format-file", () => {

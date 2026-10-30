@@ -30,7 +30,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | Safety guard | Blocks reading or editing `.env*`, keys, `~/.ssh` and credential files. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, `rm -r`, and `gh`/`glab` writes. |
 | Package-manager guard | Blocks the package managers the project's lockfile does not use. No lockfile, no enforcement. |
 | Format on edit | Runs Prettier and `eslint --fix` on the edited file, when the project has them. |
-| Stop checks | At the end of a turn that changed code: typecheck, lint, and the tests related to the changed files. Failures go back to Claude. |
+| Stop checks | At the end of a turn that changed code: typecheck, lint, and the tests related to the changed files. Failures go back to Claude. A passing run is remembered in `.git/dev-kit-stop-checks`, so the checks run again only after the code or the check commands change. |
 | Notify | Desktop notification when Claude finishes or waits. `CLAUDE_NOTIFY=0` turns it off. |
 
 **Skills** (use as `/dev-kit:<name>`)
@@ -100,7 +100,7 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 node --test tests/hooks.test.mjs
 ```
 
-101 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. Skills, commands and agents are prompts, so they are checked by running them, not by this suite.
+107 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. Skills, commands and agents are prompts, so they are checked by running them, not by this suite.
 
 ## Develop
 
