@@ -5,7 +5,7 @@ import { BRANCH_PATTERN, detectBaseBranch, issuesFromCommits, loadConfig, run, s
 
 const config = loadConfig();
 const baseBranch = detectBaseBranch(config);
-const branch = run("git branch --show-current").output;
+const branch = run(["git", "branch", "--show-current"]).output;
 const [, type, slug] = branch.match(BRANCH_PATTERN) ?? [];
 // `issue` is set only when the commits name exactly one; `issues` lists them all.
 const issues = issuesFromCommits(baseBranch);

@@ -14,7 +14,7 @@ if (config.sessionStart.rules) {
 }
 
 if (config.sessionStart.context) {
-  const branch = run("git branch --show-current").output;
+  const branch = run(["git", "branch", "--show-current"]).output;
   const baseBranch = detectBaseBranch(config);
   const issues = issuesFromCommits(baseBranch).map((number) => `#${number}`);
   const issueNote =

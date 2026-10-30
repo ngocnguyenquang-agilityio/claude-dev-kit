@@ -4,7 +4,7 @@
 // from package.json scripts; `stopChecks` in .claude/kit.json picks a subset.
 // The "finished" notification is sent here, and only when Claude really stops:
 // a separate Stop hook would run in parallel and fire even when a check fails.
-import { loadConfig, readStdinJson, run, scriptCommand, sendNotification, tail } from "./lib.mjs";
+import { loadConfig, readStdinJson, run, scriptWords, sendNotification, tail } from "./lib.mjs";
 
 function finish() {
   sendNotification("Finished. Your turn.");
@@ -21,7 +21,7 @@ const CODE = /\.(c|m)?[jt]sx?$/;
 // -z: NUL-separated and unquoted, so paths with spaces still match. Each entry
 // is "XY path"; renames and copies are followed by an extra entry holding the
 // original path.
-const entries = run("git status --porcelain -z --untracked-files=all").stdout.split("\0");
+const entries = run(["git", "status", "--porcelain", "-z", "--untracked-files=all"]).stdout.split("\0");
 const changed = [];
 let codeChanged = false;
 for (let i = 0; i < entries.length; i++) {
@@ -35,26 +35,26 @@ for (let i = 0; i < entries.length; i++) {
 }
 if (!codeChanged) finish();
 
-function relatedTestsCommand() {
-  if (changed.length === 0) return null;
-  const files = changed.map((file) => JSON.stringify(file)).join(" ");
-  if (config.tools.jest) return `${config.exec} jest --findRelatedTests ${files} --passWithNoTests`;
-  if (config.tools.vitest) return `${config.exec} vitest related --run --passWithNoTests ${files}`;
+function relatedTestsWords() {
+  // No exec words: a kit.json packageManager the kit doesn't know.
+  if (changed.length === 0 || !config.exec) return null;
+  if (config.tools.jest) return [...config.exec, "jest", "--findRelatedTests", ...changed, "--passWithNoTests"];
+  if (config.tools.vitest) return [...config.exec, "vitest", "related", "--run", "--passWithNoTests", ...changed];
   return null;
 }
 
 const commands = {
-  typecheck: scriptCommand(config, "typecheck"),
-  lint: scriptCommand(config, "lint"),
-  relatedTests: relatedTestsCommand(),
+  typecheck: scriptWords(config, "typecheck"),
+  lint: scriptWords(config, "lint"),
+  relatedTests: relatedTestsWords(),
 };
 
 for (const name of config.stopChecks) {
-  const command = commands[name];
-  if (!command) continue;
-  const result = run(command);
+  const words = commands[name];
+  if (!words) continue;
+  const result = run(words);
   if (!result.ok) {
-    console.error(`${command} failed. Fix it before finishing:\n${tail(result.output)}`);
+    console.error(`${words.join(" ")} failed. Fix it before finishing:\n${tail(result.output)}`);
     process.exit(2);
   }
 }

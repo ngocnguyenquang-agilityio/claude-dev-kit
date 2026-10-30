@@ -17,16 +17,50 @@ export async function readStdinJson() {
   }
 }
 
-// Run a command in the project root. `shell: true` lets Windows find the
-// pnpm.cmd shim. Colours are off so feedback to Claude is plain text.
-// `stdout` is untrimmed, for output where leading spaces matter.
-export function run(command) {
-  const result = spawnSync(command, {
+// Quoting alone doesn't protect an argument from cmd.exe: it expands %PATH%
+// even inside quotes. So every special character gets a caret, quotes too.
+const CMD_META = /([()\][%!^"`<>&|;, *?])/g;
+const escapeForCmd = (text) => text.replace(CMD_META, "^$1");
+
+// One argument for a .cmd shim: quoted for the program behind it, then
+// escaped twice, once for this cmd.exe and once for the shim's `%*`, which
+// cmd parses again.
+function shimArgument(argument) {
+  const quoted = `"${argument.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, "$1$1")}"`;
+  return escapeForCmd(escapeForCmd(quoted));
+}
+
+// Windows runs .cmd shims (pnpm.cmd, npx.cmd) only through cmd.exe, and Node
+// refuses to spawn them without a shell. Look the program up on PATH with
+// PATHEXT and, for a shim, build the cmd.exe line by hand so no argument is
+// read as a command.
+function throughCmd(words) {
+  if (process.platform !== "win32") return null;
+  const extensions = (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";");
+  const program = (process.env.PATH ?? "")
+    .split(path.delimiter)
+    // PATH may hold quoted folders and empty entries; cmd accepts both.
+    .map((directory) => directory.replace(/^"(.*)"$/, "$1"))
+    .filter(Boolean)
+    .flatMap((directory) => extensions.map((extension) => path.join(directory, words[0] + extension)))
+    .find((candidate) => fs.existsSync(candidate));
+  if (!program || !/\.(cmd|bat)$/i.test(program)) return null;
+  const line = [escapeForCmd(program), ...words.slice(1).map(shimArgument)].join(" ");
+  return [process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", `"${line}"`], { windowsVerbatimArguments: true }];
+}
+
+// Run a program in the project root. `words` is the program and its
+// arguments; no shell reads them, so a file name can't run commands. Colours
+// are off so feedback to Claude is plain text. `stdout` is untrimmed, for
+// output where leading spaces matter.
+export function run(words) {
+  const [program, args, options] = throughCmd(words) ?? [words[0], words.slice(1), {}];
+  const result = spawnSync(program, args, {
     cwd: projectDir,
-    shell: true,
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
     env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
+    ...options,
   });
   const output = [result.error?.message, result.stdout, result.stderr].filter(Boolean).join("\n");
   return { ok: result.status === 0, output: output.trim(), stdout: result.stdout ?? "" };
@@ -104,7 +138,7 @@ const LOCKFILES = [
 ];
 
 // How each package manager runs a locally installed binary.
-const EXEC = { pnpm: "pnpm exec", npm: "npx --no-install", yarn: "yarn", bun: "bunx" };
+const EXEC = { pnpm: ["pnpm", "exec"], npm: ["npx", "--no-install"], yarn: ["yarn"], bun: ["bunx"] };
 
 // The first script name found in package.json wins.
 const SCRIPT_NAMES = {
@@ -157,19 +191,24 @@ export function loadConfig() {
   };
 }
 
+// Words that run a package.json script, e.g. ["pnpm", "run", "lint"].
+export function scriptWords(config, key) {
+  const script = config.scripts[key];
+  return script && config.packageManager ? [config.packageManager, "run", script] : null;
+}
+
 // Command line for a package.json script, e.g. "pnpm run lint".
 export function scriptCommand(config, key) {
-  const script = config.scripts[key];
-  return script && config.packageManager ? `${config.packageManager} run ${script}` : null;
+  return scriptWords(config, key)?.join(" ") ?? null;
 }
 
 // The branch every PR targets: kit.json, else origin's default branch.
 export function detectBaseBranch(config) {
   if (config.baseBranch) return config.baseBranch;
-  const head = run("git symbolic-ref --short refs/remotes/origin/HEAD");
+  const head = run(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"]);
   if (head.ok && head.output.startsWith("origin/")) return head.output.slice("origin/".length);
   for (const candidate of ["main", "master"]) {
-    if (run(`git rev-parse --verify --quiet origin/${candidate}`).ok) return candidate;
+    if (run(["git", "rev-parse", "--verify", "--quiet", `origin/${candidate}`]).ok) return candidate;
   }
   return "main";
 }
@@ -177,14 +216,14 @@ export function detectBaseBranch(config) {
 // Issue numbers from this branch's `<type>(#N): ...` commit subjects, oldest
 // first, without repeats. More than one means the branch mixes issues.
 export function issuesFromCommits(baseBranch) {
-  // The name comes from the repo (kit.json or origin/HEAD) and goes into a
-  // shell, and hooks run without asking: a cloned repo must not run commands.
-  if (!/^[\w./-]+$/.test(baseBranch)) return [];
+  // The name comes from the repo (kit.json or origin/HEAD), and hooks run
+  // without asking: a name like "--output=x" must not become a git option.
+  if (!/^[\w./-]+$/.test(baseBranch) || baseBranch.startsWith("-")) return [];
   // A repo without a remote still has a local base branch.
-  const base = [`origin/${baseBranch}`, baseBranch].find((ref) => run(`git rev-parse --verify --quiet ${ref}`).ok);
-  const mergeBase = base && run(`git merge-base HEAD ${base}`);
+  const base = [`origin/${baseBranch}`, baseBranch].find((ref) => run(["git", "rev-parse", "--verify", "--quiet", ref]).ok);
+  const mergeBase = base && run(["git", "merge-base", "HEAD", base]);
   if (!mergeBase?.ok) return [];
-  const subjects = run(`git log --reverse --format=%s ${mergeBase.output}..HEAD`).output.split("\n");
+  const subjects = run(["git", "log", "--reverse", "--format=%s", `${mergeBase.output}..HEAD`]).output.split("\n");
   const numbers = subjects.map((subject) => subject.match(COMMIT_ISSUE)?.[1]).filter(Boolean).map(Number);
   return [...new Set(numbers)];
 }

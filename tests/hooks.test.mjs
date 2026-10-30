@@ -66,6 +66,35 @@ const pnpmProject = () =>
     "pnpm-lock.yaml": "",
   });
 
+// A name that runs commands if any shell, sh or cmd.exe, reads it unquoted
+// or inside double quotes. Every character is valid in a Windows file name.
+const HOSTILE_NAME = "src/a $(echo x) `echo y` & echo z %PATH% !PATH! ^ ;.ts";
+
+// An npm project with a fake `tool` installed that writes the arguments it
+// gets to tool-args.json, so a test sees exactly what reached the tool.
+function projectWithRecordingTool(tool, files = {}, options = {}) {
+  const script = "require('fs').writeFileSync('tool-args.json', JSON.stringify(process.argv.slice(2)))";
+  const project = makeProject(
+    {
+      "package.json": { devDependencies: { [tool]: "1.0.0" } },
+      "package-lock.json": "{}",
+      ".gitignore": "node_modules/\n",
+      [`node_modules/${tool}/package.json`]: { name: tool, version: "1.0.0", bin: { [tool]: "cli.js" } },
+      [`node_modules/${tool}/cli.js`]: script,
+      [`node_modules/.bin/${tool}`]: `#!/bin/sh\nexec node "$(dirname "$0")/../${tool}/cli.js" "$@"\n`,
+      [`node_modules/.bin/${tool}.cmd`]: `@node "%~dp0\\..\\${tool}\\cli.js" %*\r\n`,
+      ...files,
+    },
+    options,
+  );
+  fs.chmodSync(path.join(project, "node_modules", ".bin", tool), 0o755);
+  return project;
+}
+
+function recordedArgs(project) {
+  return JSON.parse(fs.readFileSync(path.join(project, "tool-args.json"), "utf8"));
+}
+
 after(() => projects.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 
 describe("kit-config", () => {
@@ -403,6 +432,28 @@ describe("stop-checks", () => {
     assert.equal(notifications.length, 1);
   });
 
+  it("passes a changed file with shell metacharacters to Jest unchanged", () => {
+    const project = projectWithRecordingTool("jest", { [HOSTILE_NAME]: "x" }, { git: true });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.deepEqual(recordedArgs(project), ["--findRelatedTests", HOSTILE_NAME, "--passWithNoTests"]);
+  });
+
+  it("passes a changed file with shell metacharacters to Vitest unchanged", () => {
+    const project = projectWithRecordingTool("vitest", { [HOSTILE_NAME]: "x" }, { git: true });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.deepEqual(recordedArgs(project), ["related", "--run", "--passWithNoTests", HOSTILE_NAME]);
+  });
+
+  it("skips related tests when kit.json names a package manager the kit doesn't know", () => {
+    const files = { "src/a.ts": "x", ".claude/kit.json": { packageManager: "deno" } };
+    const project = projectWithRecordingTool("jest", files, { git: true });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.equal(fs.existsSync(path.join(project, "tool-args.json")), false);
+  });
+
   it("sends nothing when CLAUDE_NOTIFY=0", () => {
     const result = runHookWithNotifications("stop-checks.mjs", withScripts({ typecheck: passing }), {}, { CLAUDE_NOTIFY: "0" });
 
@@ -426,6 +477,27 @@ describe("format-file", () => {
 
   it("does nothing without a file path", () => {
     assert.equal(runHook("format-file.mjs", makeProject({ "package.json": {} }), {}).code, 0);
+  });
+
+  it("passes a file name with shell metacharacters to Prettier unchanged", () => {
+    const project = projectWithRecordingTool("prettier", { [HOSTILE_NAME]: "x" });
+
+    assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: HOSTILE_NAME } }).code, 0);
+    assert.deepEqual(recordedArgs(project), ["--write", "--ignore-unknown", path.normalize(HOSTILE_NAME)]);
+  });
+
+  it("passes a file name with shell metacharacters to ESLint unchanged", () => {
+    const project = projectWithRecordingTool("eslint", { [HOSTILE_NAME]: "x" });
+
+    assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: HOSTILE_NAME } }).code, 0);
+    assert.deepEqual(recordedArgs(project), ["--fix", "--no-warn-ignored", path.normalize(HOSTILE_NAME)]);
+  });
+
+  it("does nothing when kit.json names a package manager the kit doesn't know", () => {
+    const project = projectWithRecordingTool("prettier", { "src/a.ts": "x", ".claude/kit.json": { packageManager: "deno" } });
+
+    assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: "src/a.ts" } }).code, 0);
+    assert.equal(fs.existsSync(path.join(project, "tool-args.json")), false);
   });
 });
 
