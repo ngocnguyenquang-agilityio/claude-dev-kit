@@ -3,7 +3,7 @@
 // added to Claude's context. Turn parts off with `sessionStart` in .claude/kit.json.
 import fs from "node:fs";
 import path from "node:path";
-import { BRANCH_PATTERN, detectBaseBranch, loadConfig, projectDir, run, scriptCommand } from "./lib.mjs";
+import { detectBaseBranch, issuesFromCommits, loadConfig, projectDir, run, scriptCommand } from "./lib.mjs";
 
 const config = loadConfig();
 const sections = [];
@@ -14,15 +14,18 @@ if (config.sessionStart.rules) {
 }
 
 if (config.sessionStart.context) {
-  const branch = run("git branch --show-current").output;
-  const issue = branch.match(BRANCH_PATTERN)?.[2];
+  const branch = run(["git", "branch", "--show-current"]).output;
+  const baseBranch = detectBaseBranch(config);
+  const issues = issuesFromCommits(baseBranch).map((number) => `#${number}`);
+  const issueNote =
+    issues.length === 1 ? ` (issue ${issues[0]})` : issues.length > 1 ? ` (issues ${issues.join(", ")}: conflict)` : "";
   const checks = ["lint", "typecheck", "formatCheck", "build", "test"]
     .map((key) => scriptCommand(config, key))
     .filter(Boolean);
 
   const lines = [
     "## dev-kit project context",
-    `- Branch: ${branch || "(detached)"}${issue ? ` (issue #${issue})` : ""}; PRs target ${detectBaseBranch(config)}`,
+    `- Branch: ${branch || "(detached)"}${issueNote}; PRs target ${baseBranch}`,
     `- Package manager: ${config.packageManager ?? "none detected"}`,
     `- Checks to run before saying work is done: ${checks.length ? checks.join(", ") : "none found in package.json"}`,
   ];

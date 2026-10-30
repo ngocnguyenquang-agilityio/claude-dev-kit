@@ -38,12 +38,68 @@ function runHook(hook, project, input = {}, env = {}) {
   return { code: result.status, out: result.stdout.trim(), err: result.stderr.trim() };
 }
 
+// Notifications go to a log file instead of the desktop; `notifications` holds
+// one "title|body" line per notification the hook would have shown.
+function runHookWithNotifications(hook, project, input = {}, env = {}) {
+  const log = path.join(project, "notifications.log");
+  const result = runHook(hook, project, input, { CLAUDE_NOTIFY: "1", CLAUDE_NOTIFY_LOG: log, ...env });
+  const notifications = fs.existsSync(log) ? fs.readFileSync(log, "utf8").split("\n").filter(Boolean) : [];
+  return { ...result, notifications };
+}
+
+// A project on `branch`, cut from a `main` that holds `baseSubjects`, with one
+// empty commit per entry of `subjects` on the branch.
+function branchWithCommits(branch, subjects, baseSubjects = []) {
+  const project = makeProject({ "package.json": {} }, { git: true });
+  const git = (...args) => spawnSync("git", args, { cwd: project });
+  git("symbolic-ref", "HEAD", "refs/heads/main");
+  for (const subject of ["init", ...baseSubjects]) git("commit", "-q", "--allow-empty", "-m", subject);
+  git("checkout", "-q", "-b", branch);
+  for (const subject of subjects) git("commit", "-q", "--allow-empty", "-m", subject);
+  return project;
+}
+
 const bash = (command) => ({ tool_name: "Bash", tool_input: { command } });
 const pnpmProject = () =>
   makeProject({
     "package.json": { scripts: { lint: "eslint .", typecheck: "tsc", test: "jest", build: "next build" } },
     "pnpm-lock.yaml": "",
   });
+
+// A name that runs commands if any shell, sh or cmd.exe, reads it unquoted
+// or inside double quotes. Every character is valid in a Windows file name.
+const HOSTILE_NAME = "src/a $(echo x) `echo y` & echo z %PATH% !PATH! ^ ;.ts";
+
+// An npm project with a fake `tool` installed that writes the arguments it
+// gets to tool-args.json, so a test sees exactly what reached the tool.
+function projectWithRecordingTool(tool, files = {}, options = {}) {
+  const script = "require('fs').writeFileSync('tool-args.json', JSON.stringify(process.argv.slice(2)))";
+  const project = makeProject(
+    {
+      "package.json": { devDependencies: { [tool]: "1.0.0" } },
+      "package-lock.json": "{}",
+      ".gitignore": "node_modules/\n",
+      [`node_modules/${tool}/package.json`]: { name: tool, version: "1.0.0", bin: { [tool]: "cli.js" } },
+      [`node_modules/${tool}/cli.js`]: script,
+      [`node_modules/.bin/${tool}`]: `#!/bin/sh\nexec node "$(dirname "$0")/../${tool}/cli.js" "$@"\n`,
+      [`node_modules/.bin/${tool}.cmd`]: `@node "%~dp0\\..\\${tool}\\cli.js" %*\r\n`,
+      ...files,
+    },
+    options,
+  );
+  fs.chmodSync(path.join(project, "node_modules", ".bin", tool), 0o755);
+  return project;
+}
+
+function recordedArgs(project) {
+  return JSON.parse(fs.readFileSync(path.join(project, "tool-args.json"), "utf8"));
+}
+
+// The recorded argument that names `file`: not an option, and resolving to it.
+function assertFileArgument(project, argument, file) {
+  assert.doesNotMatch(argument, /^-/);
+  assert.equal(path.resolve(project, argument), path.join(project, file));
+}
 
 after(() => projects.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 
@@ -77,14 +133,51 @@ describe("kit-config", () => {
     assert.equal(config.issuesDir, "specs");
   });
 
-  it("reads the issue number from a <type>/<N>-<slug> branch", () => {
-    const project = makeProject({ "package.json": {} }, { git: true });
-    spawnSync("git", ["checkout", "-q", "-b", "fix/7-login-crash"], { cwd: project });
+  it("splits a <type>/<slug> branch and knows no issue before the first commit", () => {
+    const { branch, wipNote } = JSON.parse(runHook("kit-config.mjs", branchWithCommits("fix/login-crash", [])).out);
 
-    const { branch, wipNote } = JSON.parse(runHook("kit-config.mjs", project).out);
+    assert.deepEqual(branch, { name: "fix/login-crash", type: "fix", slug: "login-crash", issue: null, issues: [] });
+    assert.equal(wipNote, ".claude/wip/fix-login-crash.md");
+  });
 
-    assert.deepEqual(branch, { name: "fix/7-login-crash", type: "fix", issue: 7, slug: "login-crash" });
-    assert.equal(wipNote, ".claude/wip/fix-7-login-crash.md");
+  it("reads the issue number from the branch's <type>(#N) commits", () => {
+    const project = branchWithCommits("fix/login-crash", ["fix(#7): guard the null user", "test: cover login", "fix(#7): follow-up"]);
+
+    const { branch } = JSON.parse(runHook("kit-config.mjs", project).out);
+
+    assert.equal(branch.issue, 7);
+    assert.deepEqual(branch.issues, [7]);
+  });
+
+  it("reports every number, oldest first, when the commits name more than one issue", () => {
+    const project = branchWithCommits("feat/search", ["feat(#5): add search", "fix(#3): typo", "feat(#5): filter"]);
+
+    const { branch } = JSON.parse(runHook("kit-config.mjs", project).out);
+
+    assert.equal(branch.issue, null);
+    assert.deepEqual(branch.issues, [5, 3]);
+  });
+
+  it("ignores issue commits that are already on the base branch", () => {
+    const project = branchWithCommits("fix/login-crash", [], ["fix(#9): older work"]);
+
+    assert.deepEqual(JSON.parse(runHook("kit-config.mjs", project).out).branch.issues, []);
+  });
+
+  it("never runs a command hidden in the base branch name from kit.json", () => {
+    const project = branchWithCommits("fix/login-crash", ["fix(#7): x"]);
+    fs.mkdirSync(path.join(project, ".claude"));
+    fs.writeFileSync(path.join(project, ".claude", "kit.json"), JSON.stringify({ baseBranch: "main & echo pwned > pwned.txt" }));
+
+    assert.deepEqual(JSON.parse(runHook("kit-config.mjs", project).out).branch.issues, []);
+    assert.equal(fs.existsSync(path.join(project, "pwned.txt")), false);
+  });
+
+  it("reads no number from an old <type>/<N>-<slug> branch name", () => {
+    const { branch } = JSON.parse(runHook("kit-config.mjs", branchWithCommits("fix/7-login-crash", [])).out);
+
+    assert.equal(branch.slug, "7-login-crash");
+    assert.equal(branch.issue, null);
   });
 
   it("reports no package manager for a project without package.json", () => {
@@ -237,6 +330,18 @@ describe("session-start", () => {
     assert.match(runHook("session-start.mjs", project).out, /wire the filter/);
   });
 
+  it("names the branch's issue from its commits", () => {
+    const project = branchWithCommits("fix/login-crash", ["fix(#7): guard the null user"]);
+
+    assert.match(runHook("session-start.mjs", project).out, /Branch: fix\/login-crash \(issue #7\)/);
+  });
+
+  it("flags a branch whose commits name more than one issue", () => {
+    const project = branchWithCommits("feat/search", ["feat(#5): add search", "fix(#3): typo"]);
+
+    assert.match(runHook("session-start.mjs", project).out, /\(issues #5, #3: conflict\)/);
+  });
+
   it("leaves the rules out when sessionStart.rules is false", () => {
     const project = makeProject(
       { "package.json": {}, ".claude/kit.json": { sessionStart: { rules: false } } },
@@ -308,6 +413,65 @@ describe("stop-checks", () => {
 
     assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
   });
+
+  it("sends no notification while a check fails", () => {
+    const result = runHookWithNotifications("stop-checks.mjs", withScripts({ typecheck: failing }));
+
+    assert.equal(result.code, 2);
+    assert.deepEqual(result.notifications, []);
+  });
+
+  it("notifies once when the checks pass", () => {
+    const { notifications } = runHookWithNotifications("stop-checks.mjs", withScripts({ typecheck: passing, lint: passing }));
+
+    assert.equal(notifications.length, 1);
+    assert.match(notifications[0], /\|Finished\. Your turn\.$/);
+  });
+
+  it("notifies once outside a Node project, where no checks run", () => {
+    assert.equal(runHookWithNotifications("stop-checks.mjs", makeProject({ "main.py": "x = 1" }, { git: true })).notifications.length, 1);
+  });
+
+  it("notifies on the re-run after a failed check, because the first Stop did not", () => {
+    const { notifications } = runHookWithNotifications("stop-checks.mjs", withScripts({ typecheck: failing }), { stop_hook_active: true });
+
+    assert.equal(notifications.length, 1);
+  });
+
+  it("passes a changed file with shell metacharacters to Jest unchanged", () => {
+    const project = projectWithRecordingTool("jest", { [HOSTILE_NAME]: "x" }, { git: true });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.deepEqual(recordedArgs(project), ["--findRelatedTests", HOSTILE_NAME, "--passWithNoTests"]);
+  });
+
+  it("passes a changed file with shell metacharacters to Vitest unchanged", () => {
+    const project = projectWithRecordingTool("vitest", { [HOSTILE_NAME]: "x" }, { git: true });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.deepEqual(recordedArgs(project), ["related", "--run", "--passWithNoTests", HOSTILE_NAME]);
+  });
+
+  it("passes a changed file starting with '-' to Jest as a file, not an option", () => {
+    const project = projectWithRecordingTool("jest", { "--config=evil.ts": "x" }, { git: true });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assertFileArgument(project, recordedArgs(project)[1], "--config=evil.ts");
+  });
+
+  it("skips related tests when kit.json names a package manager the kit doesn't know", () => {
+    const files = { "src/a.ts": "x", ".claude/kit.json": { packageManager: "deno" } };
+    const project = projectWithRecordingTool("jest", files, { git: true });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.equal(fs.existsSync(path.join(project, "tool-args.json")), false);
+  });
+
+  it("sends nothing when CLAUDE_NOTIFY=0", () => {
+    const result = runHookWithNotifications("stop-checks.mjs", withScripts({ typecheck: passing }), {}, { CLAUDE_NOTIFY: "0" });
+
+    assert.deepEqual(result.notifications, []);
+  });
 });
 
 describe("format-file", () => {
@@ -327,14 +491,71 @@ describe("format-file", () => {
   it("does nothing without a file path", () => {
     assert.equal(runHook("format-file.mjs", makeProject({ "package.json": {} }), {}).code, 0);
   });
+
+  it("passes a file name with shell metacharacters to Prettier unchanged", () => {
+    const project = projectWithRecordingTool("prettier", { [HOSTILE_NAME]: "x" });
+
+    assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: HOSTILE_NAME } }).code, 0);
+    assert.deepEqual(recordedArgs(project), ["--write", "--ignore-unknown", path.normalize(HOSTILE_NAME)]);
+  });
+
+  it("passes a file name with shell metacharacters to ESLint unchanged", () => {
+    const project = projectWithRecordingTool("eslint", { [HOSTILE_NAME]: "x" });
+
+    assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: HOSTILE_NAME } }).code, 0);
+    assert.deepEqual(recordedArgs(project), ["--fix", "--no-warn-ignored", path.normalize(HOSTILE_NAME)]);
+  });
+
+  it("passes a file name starting with '-' to Prettier as a file, not an option", () => {
+    const project = projectWithRecordingTool("prettier", { "--config=evil.ts": "x" });
+
+    assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: "--config=evil.ts" } }).code, 0);
+    assertFileArgument(project, recordedArgs(project).at(-1), "--config=evil.ts");
+  });
+
+  it("does nothing when kit.json names a package manager the kit doesn't know", () => {
+    const project = projectWithRecordingTool("prettier", { "src/a.ts": "x", ".claude/kit.json": { packageManager: "deno" } });
+
+    assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: "src/a.ts" } }).code, 0);
+    assert.equal(fs.existsSync(path.join(project, "tool-args.json")), false);
+  });
 });
 
 describe("notify", () => {
   it("exits quietly when CLAUDE_NOTIFY=0", () => {
-    assert.deepEqual(runHook("notify.mjs", makeProject(), { hook_event_name: "Stop" }), { code: 0, out: "", err: "" });
+    assert.deepEqual(runHook("notify.mjs", makeProject(), { message: "x" }), { code: 0, out: "", err: "" });
   });
 
-  it("exits quietly on a Stop re-run", () => {
-    assert.equal(runHook("notify.mjs", makeProject(), { stop_hook_active: true }, { CLAUDE_NOTIFY: "1" }).code, 0);
+  it("shows the title and message Claude Code sends", () => {
+    const { code, notifications } = runHookWithNotifications("notify.mjs", makeProject(), { title: "Permission", message: "Allow Bash?" });
+
+    assert.equal(code, 0);
+    assert.deepEqual(notifications, ["Permission|Allow Bash?"]);
+  });
+
+  it("names the project when Claude Code sends no title", () => {
+    const project = makeProject();
+
+    assert.deepEqual(runHookWithNotifications("notify.mjs", project, {}).notifications, [
+      `Claude Code: ${path.basename(project)}|Needs your attention.`,
+    ]);
+  });
+});
+
+describe("hooks.json", () => {
+  const { hooks } = JSON.parse(fs.readFileSync(path.join(hooksDir, "hooks.json"), "utf8"));
+  const handlers = (event) => hooks[event].flatMap((group) => group.hooks);
+
+  it("blocks the tool call when the safety guard itself fails", () => {
+    const guard = handlers("PreToolUse").find((handler) => handler.command.includes("safety-guard.mjs"));
+
+    assert.equal(guard.onFailure, "block");
+  });
+
+  it("runs only stop-checks on Stop, so a failing check sends no parallel notification", () => {
+    assert.deepEqual(
+      handlers("Stop").map((handler) => path.basename(handler.command.replace(/"/g, ""))),
+      ["stop-checks.mjs"],
+    );
   });
 });

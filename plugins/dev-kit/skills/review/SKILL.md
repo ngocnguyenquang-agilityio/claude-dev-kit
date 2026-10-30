@@ -13,7 +13,7 @@ Review everything pending, committed or not. Run it once at the end of a unit of
 - **Fixed point**: `git fetch origin <baseBranch>`, then `git merge-base HEAD origin/<baseBranch>` (the remote ref, because the local one can be stale).
 - **Diff**: `git diff <merge-base>` (working tree vs merge-base, so uncommitted work is included).
 - **New files**: `git status --porcelain`; read untracked files directly.
-- **Spec**: the issue file `<issuesDir>/<NN>-*.md`, else `gh issue view <N>`; the number comes from the branch name `<type>/<N>-<slug>`. If there is no issue, skip the Spec axis. Do not block on asking.
+- **Spec**: the issue file `<issuesDir>/<NN>-*.md`, else `gh issue view <N>`; the number comes from the caller (for example `finish-issue`), else `branch.issue` in the config. If `branch.issues` lists more than one number and no caller gave one, name the conflict in the report. If there is no issue, skip the Spec axis. Do not block on asking.
 - **Standards**: `CLAUDE.md`, `AGENTS.md`, the lint and format config, and any test-conventions skill or doc the project has, for changed test files.
 
 ## Axes

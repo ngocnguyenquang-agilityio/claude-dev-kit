@@ -1,7 +1,7 @@
 ---
 description: Draft a commit message and the commit commands from pending changes (print only)
 argument-hint: "[hint or task number]"
-allowed-tools: Bash(node:*)
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 disable-model-invocation: true
 ---
 
@@ -21,5 +21,9 @@ Message format: `<type>(#<task>): <summary>` or `<type>: <summary>` when there i
 - `type` is one of `feat`, `fix`, `refactor`, `docs`, `chore`, `test`.
 - Summary in the imperative mood, first line at most 72 characters.
 - Body explains why the change was made, not what the diff already shows.
-- Task number comes from `$ARGUMENTS` only when it looks like a number (`12` or `#12`); any other text is a hint about the change and never goes into `(#...)`. Otherwise it comes from `branch.issue` in the config, else omit the `(#...)` part.
+- Task number, the first of these that gives one:
+  - `branch.issue` in the config: set when the branch's commits name exactly one issue.
+  - When `branch.issues` lists more than one number, ask me which one this commit is for.
+  - `$ARGUMENTS`, only when it looks like a number (`12` or `#12`); any other text is a hint about the change and never goes into `(#...)`.
+  - Ask me for the issue number, or whether there is none. With none, omit the `(#...)` part.
 - End with the attribution line given in the session's system reminder, if one is present.

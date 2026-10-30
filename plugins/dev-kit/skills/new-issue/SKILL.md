@@ -1,8 +1,7 @@
 ---
 name: new-issue
-description: Draft a new issue (as a spec file when the project keeps them, else in chat), then create it on GitHub after a yes.
+description: Draft a new issue (as a spec file when the project keeps them, else in chat), then create it on GitHub after a yes. Use when the user asks to file, open or draft an issue, or when hotfix finds a bug that has no issue yet.
 argument-hint: <what the issue is about>
-disable-model-invocation: true
 ---
 
 Draft an issue for: $ARGUMENTS
