@@ -2,12 +2,19 @@
 // related to the changed files before Claude ends its turn. Failures are sent
 // back to Claude (exit 2) so it keeps working on them. Which checks run comes
 // from package.json scripts; `stopChecks` in .claude/kit.json picks a subset.
-import { loadConfig, readStdinJson, run, scriptCommand, tail } from "./lib.mjs";
+// The "finished" notification is sent here, and only when Claude really stops:
+// a separate Stop hook would run in parallel and fire even when a check fails.
+import { loadConfig, readStdinJson, run, scriptCommand, sendNotification, tail } from "./lib.mjs";
+
+function finish() {
+  sendNotification("Finished. Your turn.");
+  process.exit(0);
+}
 
 const config = loadConfig();
 const input = await readStdinJson();
 // Claude is already continuing because of this hook: don't loop forever.
-if (input?.stop_hook_active || !config.hasPackageJson) process.exit(0);
+if (input?.stop_hook_active || !config.hasPackageJson) finish();
 
 const CODE = /\.(c|m)?[jt]sx?$/;
 
@@ -26,7 +33,7 @@ for (let i = 0; i < entries.length; i++) {
   if (CODE.test(file) || /(^|\/)tsconfig\.json$/.test(file)) codeChanged = true;
   if (CODE.test(file) && !status.includes("D")) changed.push(file);
 }
-if (!codeChanged) process.exit(0);
+if (!codeChanged) finish();
 
 function relatedTestsCommand() {
   if (changed.length === 0) return null;
@@ -51,3 +58,4 @@ for (const name of config.stopChecks) {
     process.exit(2);
   }
 }
+finish();

@@ -1,7 +1,7 @@
 ---
 description: Draft a commit message and the commit commands from pending changes (print only)
 argument-hint: "[hint or task number]"
-allowed-tools: Bash(node:*)
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 disable-model-invocation: true
 ---
 

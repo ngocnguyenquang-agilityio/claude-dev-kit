@@ -38,6 +38,15 @@ function runHook(hook, project, input = {}, env = {}) {
   return { code: result.status, out: result.stdout.trim(), err: result.stderr.trim() };
 }
 
+// Notifications go to a log file instead of the desktop; `notifications` holds
+// one "title|body" line per notification the hook would have shown.
+function runHookWithNotifications(hook, project, input = {}, env = {}) {
+  const log = path.join(project, "notifications.log");
+  const result = runHook(hook, project, input, { CLAUDE_NOTIFY: "1", CLAUDE_NOTIFY_LOG: log, ...env });
+  const notifications = fs.existsSync(log) ? fs.readFileSync(log, "utf8").split("\n").filter(Boolean) : [];
+  return { ...result, notifications };
+}
+
 const bash = (command) => ({ tool_name: "Bash", tool_input: { command } });
 const pnpmProject = () =>
   makeProject({
@@ -308,6 +317,36 @@ describe("stop-checks", () => {
 
     assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
   });
+
+  it("sends no notification while a check fails", () => {
+    const result = runHookWithNotifications("stop-checks.mjs", withScripts({ typecheck: failing }));
+
+    assert.equal(result.code, 2);
+    assert.deepEqual(result.notifications, []);
+  });
+
+  it("notifies once when the checks pass", () => {
+    const { notifications } = runHookWithNotifications("stop-checks.mjs", withScripts({ typecheck: passing, lint: passing }));
+
+    assert.equal(notifications.length, 1);
+    assert.match(notifications[0], /\|Finished\. Your turn\.$/);
+  });
+
+  it("notifies once outside a Node project, where no checks run", () => {
+    assert.equal(runHookWithNotifications("stop-checks.mjs", makeProject({ "main.py": "x = 1" }, { git: true })).notifications.length, 1);
+  });
+
+  it("notifies on the re-run after a failed check, because the first Stop did not", () => {
+    const { notifications } = runHookWithNotifications("stop-checks.mjs", withScripts({ typecheck: failing }), { stop_hook_active: true });
+
+    assert.equal(notifications.length, 1);
+  });
+
+  it("sends nothing when CLAUDE_NOTIFY=0", () => {
+    const result = runHookWithNotifications("stop-checks.mjs", withScripts({ typecheck: passing }), {}, { CLAUDE_NOTIFY: "0" });
+
+    assert.deepEqual(result.notifications, []);
+  });
 });
 
 describe("format-file", () => {
@@ -331,10 +370,39 @@ describe("format-file", () => {
 
 describe("notify", () => {
   it("exits quietly when CLAUDE_NOTIFY=0", () => {
-    assert.deepEqual(runHook("notify.mjs", makeProject(), { hook_event_name: "Stop" }), { code: 0, out: "", err: "" });
+    assert.deepEqual(runHook("notify.mjs", makeProject(), { message: "x" }), { code: 0, out: "", err: "" });
   });
 
-  it("exits quietly on a Stop re-run", () => {
-    assert.equal(runHook("notify.mjs", makeProject(), { stop_hook_active: true }, { CLAUDE_NOTIFY: "1" }).code, 0);
+  it("shows the title and message Claude Code sends", () => {
+    const { code, notifications } = runHookWithNotifications("notify.mjs", makeProject(), { title: "Permission", message: "Allow Bash?" });
+
+    assert.equal(code, 0);
+    assert.deepEqual(notifications, ["Permission|Allow Bash?"]);
+  });
+
+  it("names the project when Claude Code sends no title", () => {
+    const project = makeProject();
+
+    assert.deepEqual(runHookWithNotifications("notify.mjs", project, {}).notifications, [
+      `Claude Code: ${path.basename(project)}|Needs your attention.`,
+    ]);
+  });
+});
+
+describe("hooks.json", () => {
+  const { hooks } = JSON.parse(fs.readFileSync(path.join(hooksDir, "hooks.json"), "utf8"));
+  const handlers = (event) => hooks[event].flatMap((group) => group.hooks);
+
+  it("blocks the tool call when the safety guard itself fails", () => {
+    const guard = handlers("PreToolUse").find((handler) => handler.command.includes("safety-guard.mjs"));
+
+    assert.equal(guard.onFailure, "block");
+  });
+
+  it("runs only stop-checks on Stop, so a failing check sends no parallel notification", () => {
+    assert.deepEqual(
+      handlers("Stop").map((handler) => path.basename(handler.command.replace(/"/g, ""))),
+      ["stop-checks.mjs"],
+    );
   });
 });

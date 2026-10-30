@@ -1,8 +1,7 @@
 ---
 name: start-issue
-description: Start work on a GitHub issue. Creates its branch from an up-to-date base branch and loads its tasks as the plan.
+description: Start work on a GitHub issue. Creates its branch from an up-to-date base branch and loads its tasks as the plan. Use when the user asks to start or pick up an issue by number, or from the hotfix flow.
 argument-hint: <issue number>
-disable-model-invocation: true
 ---
 
 Start issue `#$ARGUMENTS`. Each step ends when its check holds. Run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"` first for `baseBranch` and `issuesDir`.

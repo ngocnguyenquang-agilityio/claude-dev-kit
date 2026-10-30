@@ -1,7 +1,7 @@
 ---
 description: Draft a pull request description for the current branch (print only)
 argument-hint: "[target branch]"
-allowed-tools: Bash(node:*)
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 disable-model-invocation: true
 ---
 

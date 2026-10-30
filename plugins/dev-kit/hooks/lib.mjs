@@ -1,5 +1,5 @@
 // Shared helpers for the dev-kit hooks and scripts.
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -35,6 +35,56 @@ export function run(command) {
 // Keep feedback short: the end of a long log is the useful part.
 export function tail(text, max = 4000) {
   return text.length > max ? `...\n${text.slice(-max)}` : text;
+}
+
+// The text goes in through env vars, never into the script itself, so quotes
+// in a message can't break the command.
+const WINDOWS_TOAST = `
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
+$xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+$text = $xml.GetElementsByTagName('text')
+$text.Item(0).AppendChild($xml.CreateTextNode($env:NOTIFY_TITLE)) > $null
+$text.Item(1).AppendChild($xml.CreateTextNode($env:NOTIFY_BODY)) > $null
+$appId = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe'
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show([Windows.UI.Notifications.ToastNotification]::new($xml))
+`;
+
+// Show a desktop notification. It never blocks Claude: the notifier runs
+// detached. CLAUDE_NOTIFY=0 turns it off; CLAUDE_NOTIFY_LOG=<file> appends
+// "title|body" to that file instead, so tests can see what would be shown.
+export function sendNotification(body, title = `Claude Code: ${path.basename(projectDir)}`) {
+  if (process.env.CLAUDE_NOTIFY === "0") return;
+  if (process.env.CLAUDE_NOTIFY_LOG) {
+    fs.appendFileSync(process.env.CLAUDE_NOTIFY_LOG, `${title}|${body}\n`);
+    return;
+  }
+
+  const notifiers = {
+    win32: ["powershell", ["-NoProfile", "-NonInteractive", "-Command", WINDOWS_TOAST]],
+    darwin: [
+      "osascript",
+      ["-e", "display notification (system attribute \"NOTIFY_BODY\") with title (system attribute \"NOTIFY_TITLE\")"],
+    ],
+    // "--": a message starting with "-" is text, not an option.
+    linux: ["notify-send", ["--", title, body]],
+  };
+
+  // No notifier for this platform, or it isn't installed: stay silent. Claude
+  // Code captures hook output, so a terminal bell wouldn't be heard either.
+  const notifier = notifiers[process.platform];
+  if (!notifier) return;
+  try {
+    const child = spawn(notifier[0], notifier[1], {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+      env: { ...process.env, NOTIFY_TITLE: title, NOTIFY_BODY: body },
+    });
+    child.on("error", () => {});
+    child.unref();
+  } catch {
+    // Never let a missing notifier fail the hook.
+  }
 }
 
 function readJson(file) {
