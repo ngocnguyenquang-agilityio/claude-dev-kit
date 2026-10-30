@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        # The hooks take Windows-specific paths (no shell, no sandbox), so both run.
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --test tests/hooks.test.mjs
+      # Pinned so a new Claude Code release cannot turn a green build red on its own.
+      - run: npm install --global @anthropic-ai/claude-code@2.1.314
+      # --strict fails on warnings the runtime tolerates, such as unknown manifest fields.
+      - run: claude plugin validate --strict plugins/dev-kit
+      - run: claude plugin validate --strict .

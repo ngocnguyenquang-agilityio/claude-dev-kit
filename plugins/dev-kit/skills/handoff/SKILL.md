@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Write a handoff note for the current branch so a fresh session, or /standup, can continue this work.
+description: Write a handoff note for the current branch so a fresh session, or standup, can continue the work. Use when pausing work or ending a session mid-task.
 disable-model-invocation: true
 argument-hint: "[focus for the next session]"
 allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
