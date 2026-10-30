@@ -1,3 +1,4 @@
 node_modules/
 .claude/wip/
 .claude/settings.local.json
+plugins/dev-kit/evals/results/
