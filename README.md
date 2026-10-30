@@ -27,7 +27,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | Hook | What it does |
 |---|---|
 | SessionStart | Puts the working rules, the branch, the checks and this branch's handoff note into the session. A plugin cannot ship `CLAUDE.md`, so this stands in for it. |
-| Safety guard | Blocks reading or editing `.env*`, keys, `~/.ssh` and credential files. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, `rm -r`, and `gh`/`glab` writes. |
+| Safety guard | Blocks reading or editing `.env*`, keys, `~/.ssh` and credential files. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, `rm -r`, and `gh`/`glab` writes. Keeps the `reviewer` agent read-only: its Bash calls may only inspect. |
 | Package-manager guard | Blocks the package managers the project's lockfile does not use. No lockfile, no enforcement. |
 | Format on edit | Runs Prettier and `eslint --fix` on the edited file, when the project has them. |
 | Stop checks | At the end of a turn that changed code: typecheck, lint, and the tests related to the changed files. Failures go back to Claude. A passing run is remembered in `.git/dev-kit-stop-checks`, so the checks run again only after the code or the check commands change. |
@@ -75,6 +75,18 @@ To override, add `.claude/kit.json` to a project. Every key is optional:
 ```
 
 - `guard.git`: `"ask"` (default) prompts you each time, `"deny"` blocks outright, `"off"` disables the check. Secret-file blocking stays on regardless.
+
+The safety guard matches patterns in the command text. It catches mistakes, not a determined reader: a secret read through `node -e` or `python -c`, a PowerShell `[IO.File]` call, a glob (`cat .en*`) or a variable (`f=.env; cat $f`) gets past it. Two settings in the project's `.claude/settings.json` go further:
+
+- `permissions.deny`, enforced by Claude Code, covers its file tools and the file commands it recognizes in Bash (`cat`, `head`, redirections). A script that opens the file itself, such as `node -e`, still gets through.
+- The sandbox (`sandbox.enabled` with `sandbox.filesystem.denyRead`) is enforced by the operating system for every shell command and its child processes. It runs on macOS, Linux and WSL2, not on native Windows.
+
+```json
+{
+  "permissions": { "deny": ["Read(./.env*)", "Read(~/.ssh/**)"] },
+  "sandbox": { "enabled": true, "filesystem": { "denyRead": ["~/.ssh"] } }
+}
+```
 - `stopChecks`: the checks that run at the end of a turn. `[]` turns them off.
 - `sessionStart.rules`: set to `false` if the project's `CLAUDE.md` already carries these rules.
 
@@ -100,7 +112,7 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 node --test tests/hooks.test.mjs
 ```
 
-107 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. Skills, commands and agents are prompts, so they are checked by running them, not by this suite.
+193 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. Skills, commands and agents are prompts, so they are checked by running them, not by this suite.
 
 ## Develop
 
