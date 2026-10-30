@@ -2,7 +2,9 @@
   "name": "dev-kit",
   "version": "0.2.0",
   "description": "A portable Claude Code working kit: safety and quality hooks, planning, debugging, TDD and review skills, and a GitHub issue to PR workflow. Auto-detects the package manager, base branch and checks.",
-  "author": { "name": "ngoc.nguyenquang" },
+  "author": { "name": "ngoc.nguyenquang", "url": "https://github.com/ngocnguyenquang-agilityio" },
+  "homepage": "https://github.com/ngocnguyenquang-agilityio/claude-dev-kit#readme",
+  "repository": "https://github.com/ngocnguyenquang-agilityio/claude-dev-kit",
   "license": "MIT",
   "keywords": ["workflow", "hooks", "review", "tdd", "github"]
 }
