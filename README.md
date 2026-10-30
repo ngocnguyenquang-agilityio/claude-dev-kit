@@ -53,6 +53,8 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 
 Skills that need the project's config get it injected when they load (`` !`node .../kit-config.mjs` ``), so Claude never has to remember to run it.
 
+If you also keep skills with the same names in `~/.claude/skills` (`debug`, `plan`, `review` and so on), both copies load: plugin skills are namespaced as `/dev-kit:<name>`, so nothing is overridden, but Claude sees two skills for the same job and may pick either. Delete your personal copies once the plugin is installed.
+
 **Agents:** `reviewer` (read-only pre-commit review), `ui-verifier` (mobile/desktop, light/dark check in the built-in browser).
 
 Nothing here commits, pushes or opens a PR on its own. Skills print the commands and wait.
@@ -61,7 +63,9 @@ Nothing here commits, pushes or opens a PR on its own. Skills print the commands
 
 Zero config is the default. The plugin detects the package manager from the lockfile, `lint`/`typecheck`/`test`/`build`/`format:check` from `package.json` scripts, the base branch from `origin`'s default branch, and `docs/issues/` if it exists.
 
-To override, add `.claude/kit.json` to a project. Every key is optional:
+To override, add `.claude/kit.json` to a project. The settings live in the project, not in the plugin's `userConfig`, because they describe the project (its package manager, base branch, checks) and are shared by everyone who works on it; `userConfig` holds one value per user for every project.
+
+Every key is optional:
 
 ```json
 {
@@ -114,7 +118,13 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 node --test tests/hooks.test.mjs
 ```
 
-193 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. Skills and agents are prompts, so they are checked by running them, not by this suite.
+193 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
+
+Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug`, `grill` and `plan`: each checks that the skill fires and that the answer follows it. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
+
+```bash
+claude plugin eval plugins/dev-kit
+```
 
 ## Develop
 
