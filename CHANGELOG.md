@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-11-02
 
 - Added: CI runs the hook tests and `claude plugin validate --strict` on Ubuntu and Windows.
 - Added: eval cases for the `debug`, `grill` and `plan` skills, run by hand with `claude plugin eval`.
