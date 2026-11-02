@@ -6,6 +6,7 @@
 - Added: eval cases for the `debug`, `grill` and `plan` skills, run by hand with `claude plugin eval`.
 - Added: homepage, repository and category in the plugin and marketplace manifests.
 - Changed: `commit-msg`, `pr-body`, `handoff` and `standup` descriptions say when to use them.
+- Fixed: `plan` gives the final checks or review step a "Done when" check too.
 - Changed: the README explains same-named personal skills and why settings stay in `.claude/kit.json`.
 
 ## 0.2.0 - 2026-10-30
