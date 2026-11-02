@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: the `debug` eval starts from a project with a failing test instead of code pasted in chat, so it now measures the skill firing (6 of 6 runs, was 0 of 4).
+
 ## 0.3.0 - 2026-11-02
 
 - Added: CI runs the hook tests and `claude plugin validate --strict` on Ubuntu and Windows.

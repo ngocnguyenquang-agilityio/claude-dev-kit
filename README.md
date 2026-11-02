@@ -123,8 +123,10 @@ node --test tests/hooks.test.mjs
 Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug`, `grill` and `plan`: each checks that the skill fires and that the answer follows it. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
 
 ```bash
-claude plugin eval plugins/dev-kit
+claude plugin eval plugins/dev-kit --scaffold --allow-tools Edit --ablation none
 ```
+
+`--ablation none` keeps the "skill fired" check in the score; with the default no-plugin comparison it is only an indicator, so a case could pass without the skill ever firing. `--scaffold` is needed for the `debug` case, which builds a small project with a failing test before Claude starts. Shell tools cannot be granted to evals on Windows (no sandbox), so the cases do not rely on running commands.
 
 ## Develop
 
