@@ -1,16 +1,6 @@
 ---
-max_turns: 10
+max_turns: 15
 allowed_tools: [Read, Glob, Grep, Skill]
 ---
 
-This is broken: `isValidDate("2024-02-30")` returns `true`, so bad dates get saved. Here is the function:
-
-```js
-export function isValidDate(text) {
-  const [year, month, day] = text.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-  return !Number.isNaN(date.getTime());
-}
-```
-
-Fix it.
+`npm test` fails in this project: the test "rejects a day that does not exist in the month" gets `true` instead of `false`. Sort it out.
