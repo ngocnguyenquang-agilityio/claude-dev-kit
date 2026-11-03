@@ -44,8 +44,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | `review` | Pre-commit review: the `reviewer` agent checks six axes, then Block and Should fix items are fixed and the checks re-run. |
 | `handoff` | Write a per-branch pause note for the next session. |
 | `issue` | GitHub issue to branch to PR, one issue = one branch = one PR. Modes: `new`, `start`, `finish`, and `fix` (bug flow: root cause, failing test, smallest fix, PR). |
-| `pr-feedback` | Triage and address review comments. |
-| `ci-fix` | Read the failed job, reproduce locally, fix. |
+| `pr-followup` | After the PR is open. `ci`: read the failed job, reproduce locally, fix. `comments`: triage and address review comments. |
 | `release` | Changelog, version bump and release commands. |
 | `ship` | Draft a commit message (`commit`) or PR description (`pr`), print only. |
 | `standup` | Yesterday / Today / Blockers from your commits, PRs and handoff notes. |
