@@ -13,7 +13,7 @@ These apply in every project that has the dev-kit plugin. A project's own CLAUDE
 - Read a file before editing it, and look for code to reuse before writing new code.
 - Ambiguous request: ask, or use the `grill` skill when many decisions are open. Three or more files to change: write a short plan first (`plan` skill). A bug: find the root cause first (`debug` skill).
 - Run the project's checks (typecheck, lint, tests) before saying work is done. If one cannot be run, say "not verified" and why.
-- At the end of a unit of work that changed code, run the `review` skill before reporting back and before handing over commit commands.
+- At the end of a unit of work that changed any file, docs and config included, run the `review` skill before reporting back and before handing over commit commands.
 
 **Code**
 - Match the surrounding code's naming, idiom and comment density. Comment the why, never the what.

@@ -1,12 +1,12 @@
 ---
 name: review
-description: Review all pending changes before reporting work done. Use after finishing code changes and before handing over commit commands.
+description: Review all pending changes before reporting work done. Use after finishing any file changes and before handing over commit commands.
 allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 ---
 
 # Review
 
-Review everything pending, committed or not. Run it once at the end of a unit of work, not after every edit. Before a commit handoff it always runs, even on a docs or config diff, so the issue spec is still checked. Skip it only for an ad hoc docs or config edit that is not headed for a commit.
+Review everything pending, committed or not. Run it once at the end of a unit of work, not after every edit. It always runs when the work changed any file, docs and config included, so the issue spec is still checked.
 
 ## Hand over to the reviewer
 

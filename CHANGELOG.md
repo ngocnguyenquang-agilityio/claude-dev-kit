@@ -2,8 +2,8 @@
 
 ## Unreleased
 
+- Changed: `review` runs after any file change, docs and config included, instead of skipping text-only diffs.
 - Changed: the `reviewer` agent owns the six review axes and one set of levels (Block, Should fix, Nit); the `review` skill only hands over to it, fixes and re-runs the checks, instead of splitting the axes and keeping two sets of labels.
-
 - Fixed: the `debug` eval starts from a project with a failing test instead of code pasted in chat, so it now measures the skill firing (6 of 6 runs, was 0 of 4).
 
 ## 0.3.0 - 2026-11-02
