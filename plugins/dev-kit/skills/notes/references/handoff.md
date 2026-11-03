@@ -1,16 +1,6 @@
----
-name: handoff
-description: Write a handoff note for the current branch so a fresh session, or standup, can continue the work. Use when pausing work or ending a session mid-task.
-disable-model-invocation: true
-argument-hint: "[focus for the next session]"
-allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
----
+# notes handoff
 
-# Handoff
-
-Compact this conversation into one note per branch. `/dev-kit:standup` reads it, and the plugin's SessionStart hook loads it into the next session on the same branch.
-
-Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
+Compact this conversation into one note per branch. `/dev-kit:notes standup` reads it, and the plugin's SessionStart hook loads it into the next session on the same branch.
 
 ## Steps
 
@@ -21,7 +11,7 @@ Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
 
 ## Note format
 
-Use exactly these sections, so `/standup` can read them:
+Use exactly these sections, so `notes standup` can read them:
 
 ```markdown
 # WIP: <branch> (#N) - <YYYY-MM-DD HH:MM>
