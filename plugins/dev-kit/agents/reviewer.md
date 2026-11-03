@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Pre-commit reviewer. Reviews the pending work on a branch (uncommitted and untracked files included) on six axes: spec, correctness, standards, tests, security and scope. Normally run through the `review` skill.
+description: Pre-commit reviewer. Reviews the pending work on a branch (uncommitted and untracked files included) on six axes (spec, correctness, standards, tests, security and scope). Normally run through the `review` skill.
 tools: Read, Grep, Glob, Bash
 ---
 
