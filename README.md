@@ -41,7 +41,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | `plan` | Break multi-file work into verifiable steps. |
 | `debug` | Root cause first, with a feedback loop. |
 | `tdd` | Red-green loop at an agreed seam. |
-| `review` | Pre-commit review on six axes; spawns the `reviewer` agent. |
+| `review` | Pre-commit review: the `reviewer` agent checks six axes, then Block and Should fix items are fixed and the checks re-run. |
 | `handoff` | Write a per-branch pause note for the next session. |
 | `new-issue`, `start-issue`, `finish-issue` | GitHub issue to branch to PR, one issue = one branch = one PR. |
 | `hotfix` | Bug flow: root cause, failing test, smallest fix, PR. |

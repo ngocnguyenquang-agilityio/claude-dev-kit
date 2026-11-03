@@ -15,7 +15,7 @@ Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
 3. Print, in code blocks:
    - The commit message.
    - The exact `git add` and `git commit` commands for me to run.
-   - The remaining judgement-call review findings, if any.
+   - The remaining Nit review findings, if any.
 
 Message format: `<type>(#<task>): <summary>` or `<type>: <summary>` when there is no task.
 

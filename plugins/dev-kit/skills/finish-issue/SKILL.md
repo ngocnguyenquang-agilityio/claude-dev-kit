@@ -20,14 +20,14 @@ Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
    - If you started this skill on your own (the user didn't type `/dev-kit:finish-issue`) and there is an issue, confirm with the user that it is done before going on, because step 4 marks it closed.
 2. **Checks green.** Run every command under `checks` in the config. Done when all pass. Fix failures before going on. A check that is `null` doesn't exist here: say "not verified" for it in the report.
 3. **Review.** Run the `review` skill with the issue number, if there is one. It spawns the `reviewer` agent, which reviews uncommitted and untracked work against the merge-base with `origin/<baseBranch>`. If `/dev-kit:commit-msg` or an earlier review already covered this same diff, don't review twice.
-   - Fix every hard violation (the skill's Block items), spec gap and Should fix item (Standards and Tests problems).
+   - Fix every Block and Should fix item.
    - The `review` skill re-runs the checks after the fixes, so don't repeat step 2.
-   - Keep the judgement calls for the report.
+   - Keep the Nits for the report.
 4. **Status docs.** Only with an issue, and when `issuesDir` is set.
    - In the issue file, tick `[x]` every task the diff actually completes. Leave the others unchecked and list them for the user.
    - If `<issuesDir>/README.md` has a status cell for this issue, set it to the "closed" value the table already uses for finished issues.
 5. **Report.** Show the user:
-   - The review: hard violations fixed, and the judgement calls still open.
+   - The review: Block and Should fix items fixed, and the Nits still open.
    - The check results.
    - The exact commands, in order, each in its own `bash` block:
      - `git add` with the paths.
