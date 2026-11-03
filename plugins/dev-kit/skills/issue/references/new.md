@@ -1,17 +1,10 @@
----
-name: new-issue
-description: Draft a new issue (as a spec file when the project keeps them, else in chat), then create it on GitHub after a yes. Use when the user asks to file, open or draft an issue, or when hotfix finds a bug that has no issue yet.
-argument-hint: <what the issue is about>
-allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
----
+# issue new
 
 Draft an issue for: $ARGUMENTS
 
-Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
-
 If `issuesDir` in the config is set, the project keeps issue specs as files and steps 2 to 4 write one. If it is `null`, draft the same sections in chat and skip the file and index.
 
-1. **Number.** Only when writing a file. Use the next free GitHub number: check `gh issue list --state all -L 1` and `gh pr list --state all -L 1`, because issues and PRs share the counter, and take the higher one plus one. GitHub assigns the real number, and step 5 reconciles it.
+1. **Number.** Only when writing a file. Use the next free GitHub number: check `gh issue list --state all -L 1` and `gh pr list --state all -L 1`, because issues and PRs share the counter, and take the higher one plus one. GitHub assigns the real number, and step 6 reconciles it.
 2. **Draft.** Use exactly these `##` sections, in this order. Copy the tone and granularity of the most recent issue file when there is one.
    - **Goal**: one or two sentences on the outcome.
    - **Tasks**: `- [ ]` checkboxes, each small enough for one sitting. Name files and functions when you know them.
@@ -22,4 +15,4 @@ If `issuesDir` in the config is set, the project keeps issue specs as files and 
 5. **Review.** Show the user the draft and wait for edits or a yes.
 6. **Create on GitHub.** After an explicit yes, run `gh issue create --title "<title>" --body-file <file>` (or `--body` with the draft when there is no file). It prints the issue URL. If its number differs from `NN`, rename the file and fix its index row.
 
-Creating the issue is the end of this skill. The doc changes stay uncommitted. `/dev-kit:start-issue <N>` carries them onto the issue branch, where they are committed with the work.
+Creating the issue is the end of this mode. The doc changes stay uncommitted. `/dev-kit:issue start <N>` carries them onto the issue branch, where they are committed with the work.
