@@ -43,12 +43,11 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | `tdd` | Red-green loop at an agreed seam. |
 | `review` | Pre-commit review: the `reviewer` agent checks six axes, then Block and Should fix items are fixed and the checks re-run. |
 | `handoff` | Write a per-branch pause note for the next session. |
-| `new-issue`, `start-issue`, `finish-issue` | GitHub issue to branch to PR, one issue = one branch = one PR. |
-| `hotfix` | Bug flow: root cause, failing test, smallest fix, PR. |
+| `issue` | GitHub issue to branch to PR, one issue = one branch = one PR. Modes: `new`, `start`, `finish`, and `fix` (bug flow: root cause, failing test, smallest fix, PR). |
 | `pr-feedback` | Triage and address review comments. |
 | `ci-fix` | Read the failed job, reproduce locally, fix. |
 | `release` | Changelog, version bump and release commands. |
-| `commit-msg`, `pr-body` | Draft a commit message or PR description (print only). |
+| `ship` | Draft a commit message (`commit`) or PR description (`pr`), print only. |
 | `standup` | Yesterday / Today / Blockers from your commits, PRs and handoff notes. |
 
 Skills that need the project's config get it injected when they load (`` !`node .../kit-config.mjs` ``), so Claude never has to remember to run it.
