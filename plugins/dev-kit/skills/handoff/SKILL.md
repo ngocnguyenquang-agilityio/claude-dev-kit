@@ -1,6 +1,16 @@
-# notes handoff
+---
+name: handoff
+description: Write a per-branch note so a fresh session can continue. Use when pausing work or ending a session mid-task.
+argument-hint: "[focus for the next session]"
+disable-model-invocation: true
+allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"), Bash(git log:*), Bash(date:*), Read, Glob
+---
 
-Compact this conversation into one note per branch. `/dev-kit:notes standup` reads it, and the plugin's SessionStart hook loads it into the next session on the same branch.
+Focus for the next session: $ARGUMENTS
+
+Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
+
+Compact this conversation into one note per branch. The plugin's SessionStart hook loads it into the next session on the same branch.
 
 ## Steps
 
@@ -10,8 +20,6 @@ Compact this conversation into one note per branch. `/dev-kit:notes standup` rea
 4. Print the path so the user can paste it into a new session.
 
 ## Note format
-
-Use exactly these sections, so `notes standup` can read them:
 
 ```markdown
 # WIP: <branch> (#N) - <YYYY-MM-DD HH:MM>
