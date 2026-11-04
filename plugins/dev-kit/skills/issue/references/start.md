@@ -11,4 +11,4 @@ Start issue `#$ARGUMENTS`. Each step ends when its check holds. `baseBranch` and
 5. **Plan.** Turn every unchecked `[ ]` task (or, with no task list, every requirement in the issue body) into a task-list step. Name the acceptance criteria that will prove the issue done.
 6. **Framework context.** If a task touches an API from a framework whose docs the project bundles or whose version is newer than you know, read those docs before writing code.
 
-Finish by telling the user the branch name, the type you chose and why, the issue number `#N` (so the first commit and a `notes handoff` note can carry it), and the plan. Then wait for a go-ahead before implementing.
+Finish by telling the user the branch name, the type you chose and why, the issue number `#N` (so the first commit and a `handoff` note can carry it), and the plan. Then wait for a go-ahead before implementing.

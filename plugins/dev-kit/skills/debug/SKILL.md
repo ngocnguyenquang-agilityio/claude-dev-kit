@@ -1,6 +1,6 @@
 ---
 name: debug
-description: Find root causes before fixing. Use when something is broken, throwing, failing or slow.
+description: Find root causes before fixing. Use BEFORE changing any code whenever something is broken, throwing, failing, slow or giving wrong output, including a failing test, an error message or a request to "fix", "sort out" or "figure out why".
 ---
 
 # Debug

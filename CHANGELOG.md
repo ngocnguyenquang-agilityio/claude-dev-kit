@@ -4,7 +4,13 @@
 
 - Breaking: `new-issue`, `start-issue`, `finish-issue` and `hotfix` are now `/dev-kit:issue new|start|finish|fix`, and `commit-msg` and `pr-body` are now `/dev-kit:ship commit|pr`. The old names are removed, with no aliases.
 - Breaking: `ci-fix` and `pr-feedback` are now `/dev-kit:pr-followup ci|comments`. The old names are removed, with no aliases.
-- Breaking: `handoff` and `standup` are now `/dev-kit:notes handoff|standup`, and Claude no longer starts `standup` on its own. The old names are removed, with no aliases. The note format and its path are unchanged.
+- Breaking: `standup` is removed. `handoff` stays `/dev-kit:handoff`, and Claude does not start it on its own. The note format and its path are unchanged.
+- Breaking: `sessionStart.rules` is removed from `.claude/kit.json`; the working rules always print.
+- Changed: the working rules shrink to seven lines. The git, run-the-checks, skill-trigger and general style rules are gone, because hooks enforce them or the skill descriptions carry them.
+- Changed: the `plan` description names the 3-file threshold, and the `debug` description fires before any fix.
+- Changed: `pr-followup` prints its git commands and runs one only after you say yes to it, like `issue finish`. `ship` still only prints.
+- Changed: every skill that calls `review` runs it unless it already ran on the same diff.
+- Fixed: `ship` points to `issue-number.md` instead of "the shared rule".
 - Changed: `issue finish` drafts the commit and PR text through `ship` instead of repeating it, and the issue-number rule lives in one file shared by `issue` and `ship`.
 - Changed: `review` runs after any file change, docs and config included, instead of skipping text-only diffs.
 - Changed: the `reviewer` agent owns the six review axes and one set of levels (Block, Should fix, Nit); the `review` skill only hands over to it, fixes and re-runs the checks, instead of splitting the axes and keeping two sets of labels.

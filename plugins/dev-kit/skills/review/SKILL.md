@@ -23,4 +23,4 @@ Fix Block and Should fix items, then re-run every command under `checks` from th
 1. One-line verdict: clean, or has Block items.
 2. Findings by level, each with `file:line`, the problem, the fix, and whether it is "fixed" or "needs your decision".
 
-No praise filler, no restating the diff. Never run `git commit` or `git push`; the user runs commits.
+No praise filler, no restating the diff. This skill never runs `git commit` or `git push`.

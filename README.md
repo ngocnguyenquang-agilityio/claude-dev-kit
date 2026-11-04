@@ -1,6 +1,6 @@
 # claude-dev-kit
 
-A Claude Code plugin marketplace with one plugin, `dev-kit`: a portable version of a personal working kit (rules, skills, agents and hooks). It adapts to each project by itself.
+A Claude Code plugin marketplace with one plugin, `dev-kit`: a personal working kit (rules, skills, agents and hooks). It adapts to each project by itself.
 
 ## Install
 
@@ -42,7 +42,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | `debug` | Root cause first, with a feedback loop. |
 | `tdd` | Red-green loop at an agreed seam. |
 | `review` | Pre-commit review: the `reviewer` agent checks six axes, then Block and Should fix items are fixed and the checks re-run. |
-| `notes` | Across sessions. `handoff`: write a per-branch pause note for the next session. `standup`: Yesterday / Today / Blockers from your commits, PRs and handoff notes. |
+| `handoff` | Across sessions: write a per-branch pause note that the next session on the branch loads. |
 | `issue` | GitHub issue to branch to PR, one issue = one branch = one PR. Modes: `new`, `start`, `finish`, and `fix` (bug flow: root cause, failing test, smallest fix, PR). |
 | `pr-followup` | After the PR is open. `ci`: read the failed job, reproduce locally, fix. `comments`: triage and address review comments. |
 | `release` | Changelog, version bump and release commands. |
@@ -54,7 +54,7 @@ If you also keep skills with the same names in `~/.claude/skills` (`debug`, `pla
 
 **Agents:** `reviewer` (read-only pre-commit review), `ui-verifier` (mobile/desktop, light/dark check in the built-in browser).
 
-Nothing here commits, pushes or opens a PR on its own. Skills print the commands and wait.
+Nothing here commits, pushes or opens a PR on its own. `ship` only prints; `issue finish` and `pr-followup` print the commands, then run one only after you say yes to it.
 
 ## Configuration
 
@@ -72,7 +72,7 @@ Every key is optional:
   "scripts": { "typecheck": "check-types", "formatCheck": "format:check" },
   "enforcePackageManager": true,
   "guard": { "git": "ask" },
-  "sessionStart": { "rules": true, "context": true },
+  "sessionStart": { "context": true },
   "stopChecks": ["typecheck", "lint", "relatedTests"]
 }
 ```
@@ -91,7 +91,7 @@ The safety guard matches patterns in the command text. It catches mistakes, not 
 }
 ```
 - `stopChecks`: the checks that run at the end of a turn. `[]` turns them off.
-- `sessionStart.rules`: set to `false` if the project's `CLAUDE.md` already carries these rules.
+- `sessionStart.context`: set to `false` to leave the branch, package manager, checks and handoff note out of the session. The working rules always print.
 
 Print what was resolved for the current project:
 

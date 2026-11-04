@@ -192,7 +192,7 @@ export function loadConfig() {
     baseBranch: override.baseBranch ?? null,
     issuesDir: override.issuesDir ?? (fs.existsSync(path.join(projectDir, "docs", "issues")) ? "docs/issues" : null),
     guard: { git: "ask", ...override.guard },
-    sessionStart: { rules: true, context: true, ...override.sessionStart },
+    sessionStart: { context: true, ...override.sessionStart },
     stopChecks: override.stopChecks ?? ["typecheck", "lint", "relatedTests"],
   };
 }

@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Break non-trivial work into small, verifiable steps. Use before implementing anything that spans multiple files or steps.
+description: Break non-trivial work into small, verifiable steps. Use before implementing anything that changes 3 or more files or needs several dependent steps.
 ---
 
 # Plan
@@ -19,4 +19,4 @@ Turn the request into an ordered list of small steps. Each step must be independ
 
 ## Output
 
-The plan stays in chat. Write it to a file only when the user asks or the work will span several sessions; if so, say the path so `notes handoff` can reference it.
+The plan stays in chat. Write it to a file only when the user asks or the work will span several sessions; if so, say the path so `handoff` can reference it.

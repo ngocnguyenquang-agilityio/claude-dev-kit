@@ -460,22 +460,16 @@ describe("session-start", () => {
     assert.match(runHook("session-start.mjs", project).out, /\(issues #5, #3: conflict\)/);
   });
 
-  it("leaves the rules out when sessionStart.rules is false", () => {
+  it("leaves the project context out when sessionStart.context is false", () => {
     const project = makeProject(
-      { "package.json": {}, ".claude/kit.json": { sessionStart: { rules: false } } },
+      { "package.json": {}, ".claude/kit.json": { sessionStart: { context: false } } },
       { git: true },
     );
 
     const { out } = runHook("session-start.mjs", project);
 
-    assert.doesNotMatch(out, /working rules/);
-    assert.match(out, /project context/);
-  });
-
-  it("prints nothing when both parts are off", () => {
-    const project = makeProject({ "package.json": {}, ".claude/kit.json": { sessionStart: { rules: false, context: false } } });
-
-    assert.equal(runHook("session-start.mjs", project).out, "");
+    assert.match(out, /working rules/);
+    assert.doesNotMatch(out, /project context/);
   });
 });
 

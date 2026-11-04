@@ -14,5 +14,5 @@ Message format: `<type>(#<task>): <summary>` or `<type>: <summary>` when there i
 - `type` is one of `feat`, `fix`, `refactor`, `docs`, `chore`, `test`.
 - Summary in the imperative mood, first line at most 72 characters.
 - Body explains why the change was made, not what the diff already shows.
-- Task number: the issue number from the shared rule. Hint text in the arguments is about the change and never goes into `(#...)`.
+- Task number: the issue number found by `issue-number.md` (see the router). Hint text in the arguments is about the change and never goes into `(#...)`.
 - End with the attribution line given in the session's system reminder, if one is present.

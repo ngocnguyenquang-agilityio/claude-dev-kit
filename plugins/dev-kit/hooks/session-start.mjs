@@ -1,17 +1,13 @@
 // SessionStart: a plugin cannot ship CLAUDE.md rules, so put the working rules
 // and the project context into the session instead. Whatever this prints is
-// added to Claude's context. Turn parts off with `sessionStart` in .claude/kit.json.
+// added to Claude's context. Turn the project context off with `sessionStart.context`
+// in .claude/kit.json; the rules always print.
 import fs from "node:fs";
 import path from "node:path";
 import { detectBaseBranch, issuesFromCommits, loadConfig, projectDir, run, scriptCommand } from "./lib.mjs";
 
 const config = loadConfig();
-const sections = [];
-
-if (config.sessionStart.rules) {
-  const rules = fs.readFileSync(new URL("../rules/working-rules.md", import.meta.url), "utf8").trim();
-  sections.push(rules);
-}
+const sections = [fs.readFileSync(new URL("../rules/working-rules.md", import.meta.url), "utf8").trim()];
 
 if (config.sessionStart.context) {
   const branch = run(["git", "branch", "--show-current"]).output;
