@@ -1,6 +1,7 @@
 // PreToolUse (Bash/PowerShell): use the project's own package manager, the one
 // its lockfile names, and block the others. Exit code 2 blocks the tool call and
-// sends stderr back to Claude. Projects with no lockfile are left alone.
+// sends stderr back to Claude. Projects with no lockfile and no `packageManager`
+// in .claude/kit.json are left alone.
 import { binaryName, commandIndex, commandSegments, loadConfig, readStdinJson } from "./lib.mjs";
 
 const config = loadConfig();
