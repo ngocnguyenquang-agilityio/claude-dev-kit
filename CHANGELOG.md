@@ -1,11 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 - 2026-11-05
 
 - Breaking: `new-issue`, `start-issue`, `finish-issue` and `hotfix` are now `/dev-kit:issue new|start|finish|fix`, and `commit-msg` and `pr-body` are now `/dev-kit:ship commit|pr`. The old names are removed, with no aliases.
 - Breaking: `ci-fix` and `pr-feedback` are now `/dev-kit:pr-followup ci|comments`. The old names are removed, with no aliases.
 - Breaking: `standup` is removed. `handoff` stays `/dev-kit:handoff`, and Claude does not start it on its own. The note format and its path are unchanged.
 - Breaking: `sessionStart.rules` is removed from `.claude/kit.json`; the working rules always print.
+- Added: the MIT license.
+- Changed: the plugin and README describe a personal kit instead of a portable one.
 - Changed: the working rules shrink to seven lines. The git, run-the-checks, skill-trigger and general style rules are gone, because hooks enforce them or the skill descriptions carry them.
 - Changed: the `plan` description names the 3-file threshold, and the `debug` description fires before any fix.
 - Changed: `pr-followup` prints its git commands and runs one only after you say yes to it, like `issue finish`. `ship` still only prints.
