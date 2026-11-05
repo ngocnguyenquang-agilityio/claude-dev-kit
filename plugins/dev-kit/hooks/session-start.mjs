@@ -34,4 +34,4 @@ if (config.sessionStart.context) {
   sections.push(lines.join("\n"));
 }
 
-if (sections.length > 0) console.log(sections.join("\n\n"));
+console.log(sections.join("\n\n"));
