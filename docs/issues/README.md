@@ -1,0 +1,11 @@
+# Issues
+
+One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of truth; these files hold the task checklist that `/dev-kit:issue finish` ticks.
+
+| # | Title | Status | Depends on |
+|---|---|---|---|
+| 15 | [Safety guard: ask before any gh or glab command that is not read-only](15-gh-read-only-allowlist.md) | open | none |
+| 16 | [Safety guard: ask before discarding work or deleting a directory tree](16-guard-discard-and-recursive-delete.md) | open | #15 |
+| 17 | [Safety guard: block more credential files](17-more-secret-files.md) | open | #16 |
+
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged.
