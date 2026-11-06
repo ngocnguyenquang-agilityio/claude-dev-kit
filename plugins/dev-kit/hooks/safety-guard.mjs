@@ -14,8 +14,9 @@
 // a glob (`cat .en*`) or a variable (`f=.env; cat $f`). `permissions.deny`
 // rules miss interpreters too; only the Claude Code sandbox stops every
 // process (see the README).
+import fs from "node:fs";
 import path from "node:path";
-import { binaryName, commandIndex, commandSegments, loadConfig, readStdinJson } from "./lib.mjs";
+import { binaryName, commandIndex, commandSegments, loadConfig, projectDir, readStdinJson } from "./lib.mjs";
 
 const SECRET_NAME = [
   /^\.env(\..+)?$/,
@@ -109,6 +110,44 @@ function gitSubcommand(args) {
   return { name: "", rest: [], options: args };
 }
 
+// `git checkout` options whose value is a branch name, not a path.
+const CHECKOUT_BRANCH_OPTIONS = new Set(["-b", "-B", "--orphan"]);
+const CHECKOUT_DISCARDS = /^(-f|--force|-p|--patch|--ours|--theirs|--)$/;
+
+// The command text alone can't tell `git checkout src/a.js` from `git checkout
+// feat/x`, so an argument is a path when it is `.`, has a glob character or
+// names something that exists. That still misses a quoted path (quotes are
+// blanked before this runs) and a path under `git -C <dir>` or after `cd`, and
+// asks for a branch that shares a file's name.
+function checkoutTakesPaths(rest) {
+  if (rest.some((arg) => CHECKOUT_DISCARDS.test(arg))) return true;
+  return rest
+    .filter((arg, i) => !arg.startsWith("-") && !CHECKOUT_BRANCH_OPTIONS.has(rest[i - 1]))
+    .some((arg) => arg === "." || /[*?[]/.test(arg) || fs.existsSync(path.resolve(shellDir, arg)));
+}
+
+// Why a git command throws away working-tree changes, or null when it only
+// moves between branches or touches the index.
+function discardRisk(name, rest, force) {
+  if (name === "checkout" && rest.includes("-B")) return "git checkout -B resets an existing branch";
+  if (name === "checkout" && force) return "git checkout -f throws away uncommitted changes";
+  if (name === "checkout" && checkoutTakesPaths(rest)) return "git checkout of paths throws away uncommitted changes";
+  if (name === "restore") {
+    const staged = rest.some((arg) => arg === "--staged" || arg === "-S");
+    const worktree = rest.some((arg) => arg === "--worktree" || arg === "-W");
+    if (!staged || worktree) return "git restore throws away uncommitted changes";
+  }
+  if (name === "switch" && rest.some((arg) => /^(-C|--force-create)$/.test(arg))) return "git switch -C resets an existing branch";
+  if (name === "switch" && (force || rest.includes("--discard-changes"))) return "git switch -f throws away uncommitted changes";
+  if (name === "rm" && force) return "git rm -f deletes files with uncommitted changes";
+  return null;
+}
+
+// Remove-Item and its aliases. `-r`, `-rec`, `-Recurse:$true` all mean
+// -Recurse; only `-Recurse:$false` turns it off.
+const REMOVE_ITEM = new Set(["remove-item", "ri", "del", "erase", "rd", "rmdir"]);
+const POWERSHELL_RECURSE = /^-r(e(c(u(r(se?)?)?)?)?)?(:(?!\$false$).*)?$/i;
+
 // Why this segment needs the user's yes, or null when it is routine.
 function riskOf(words) {
   const start = commandIndex(words);
@@ -124,14 +163,17 @@ function riskOf(words) {
     if (name === "branch" && rest.some((arg) => arg === "-D")) return "git branch -D deletes a branch with unmerged work";
     if (name === "stash" && ["drop", "clear"].includes(rest[0])) return "dropping a stash loses its changes";
     if (GIT_WRITES.has(name)) return `git ${name} changes history or shared branches`;
+    // `git rm -rf` and `git checkout -fq` put -f in a cluster of short flags.
+    const discard = discardRisk(name, rest, force || rest.some((arg) => /^-[a-zA-Z]*f[a-zA-Z]*$/.test(arg)));
+    if (discard) return discard;
   }
 
   if (bin === "gh" || bin === "glab") return forgeRisk(bin, args);
 
   const recursive = args.some((arg) => arg === "--recursive" || /^-[a-z]*r[a-z]*$/i.test(arg));
   if (bin === "rm" && recursive) return "rm -r deletes a directory tree";
-  if (bin === "remove-item" && args.some((arg) => /^-recurse$/i.test(arg))) return "Remove-Item -Recurse deletes a directory tree";
-  if (bin === "rmdir" && args.some((arg) => arg.toLowerCase() === "/s")) return "rmdir /s deletes a directory tree";
+  if (REMOVE_ITEM.has(bin) && args.some((arg) => POWERSHELL_RECURSE.test(arg) || arg.toLowerCase() === "/s"))
+    return `${bin} -Recurse or /s deletes a directory tree`;
 
   return null;
 }
@@ -240,6 +282,8 @@ const config = loadConfig();
 const input = await readStdinJson();
 const toolInput = input?.tool_input ?? {};
 const shellTool = input?.tool_name === "Bash" || input?.tool_name === "PowerShell";
+// Where relative paths in the command resolve.
+const shellDir = input?.cwd ?? projectDir;
 
 const target = shellTool ? null : (toolInput.file_path ?? toolInput.path);
 const blockedSecret = shellTool ? readsSecret(toolInput.command ?? "") : target && isSecretPath(target);

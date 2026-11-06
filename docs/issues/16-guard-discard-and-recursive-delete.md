@@ -6,16 +6,16 @@ The safety guard asks the user before any command that throws away uncommitted w
 
 ## Tasks
 
-- [ ] In `riskOf` in `plugins/dev-kit/hooks/safety-guard.mjs`, ask for the git commands that discard working-tree changes:
+- [x] In `riskOf` in `plugins/dev-kit/hooks/safety-guard.mjs`, ask for the git commands that discard working-tree changes:
   - `git checkout` with `-f`/`--force`, `-p`, `--ours`/`--theirs`, or a pathspec. The command text alone cannot tell `git checkout src/a.js` from `git checkout feat/x`, so use this rule: ask when `--` is present, when an argument is `.` or contains a glob character, or when an argument names a file that exists in the project. Otherwise treat it as a branch. Note the gap that remains in a code comment.
   - `git checkout -B` (resets an existing branch).
   - `git restore`, unless it only touches the index: `--staged`/`-S` without `--worktree`/`-W`.
   - `git switch -C`/`--force-create`, and `git switch -f`/`--discard-changes`.
   - `git rm -f`.
-- [ ] Keep the commands the skills run free of prompts: `git checkout <branch>`, `git checkout -b <branch>`, `git switch <branch>`, `git restore --staged <path>`, `git restore -S <path>`.
-- [ ] Ask for `Remove-Item` with any abbreviation of `-Recurse` (`-r`, `-rec`, `-Recurse:$true`, ...) but not `-Recurse:$false`, and for its aliases `ri`, `del`, `erase`, `rd` and `rmdir` when they are recursive (`-r...` or `/s`).
-- [ ] Add tests in `tests/hooks.test.mjs` for each new "ask" and for each command that must stay free.
-- [ ] Update the Safety guard row and the test count in `README.md`.
+- [x] Keep the commands the skills run free of prompts: `git checkout <branch>`, `git checkout -b <branch>`, `git switch <branch>`, `git restore --staged <path>`, `git restore -S <path>`.
+- [x] Ask for `Remove-Item` with any abbreviation of `-Recurse` (`-r`, `-rec`, `-Recurse:$true`, ...) but not `-Recurse:$false`, and for its aliases `ri`, `del`, `erase`, `rd` and `rmdir` when they are recursive (`-r...` or `/s`).
+- [x] Add tests in `tests/hooks.test.mjs` for each new "ask" and for each command that must stay free.
+- [x] Update the Safety guard row and the test count in `README.md`.
 
 ## Acceptance criteria
 
