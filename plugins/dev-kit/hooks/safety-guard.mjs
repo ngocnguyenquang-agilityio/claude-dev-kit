@@ -1,8 +1,9 @@
 // PreToolUse: turn the written safety rules into real checks.
 //  - Secret files (.env*, keys, ~/.ssh, credentials) are never read or edited: blocked.
-//  - git writes, gh/glab writes and destructive commands make Claude Code ask the
-//    user first, every time. Set guard.git to "deny" in .claude/kit.json to block
-//    them outright, or "off" to turn this check off.
+//  - git writes, gh/glab commands not known to be read-only and destructive
+//    commands make Claude Code ask the user first, every time. Set guard.git to
+//    "deny" in .claude/kit.json to block them outright, or "off" to turn this
+//    check off.
 //  - The reviewer agent may run only commands that inspect: anything else is
 //    blocked, so it stays read-only whatever its prompt says.
 // Exit code 2 blocks the call and sends stderr to Claude. A JSON "ask" decision
@@ -46,11 +47,57 @@ function readsSecret(command) {
 }
 
 const GIT_WRITES = new Set(["commit", "push", "merge", "rebase", "cherry-pick", "am"]);
-const GH_WRITES = {
-  pr: new Set(["create", "merge", "close", "reopen", "comment", "review", "edit", "ready"]),
-  issue: new Set(["create", "close", "reopen", "comment", "edit", "delete"]),
-  release: new Set(["create", "delete", "edit"]),
+// Read-only gh and glab commands, as group -> actions (`true`: any action).
+// Any other command may write to the remote, so it asks.
+const READ_ONLY_FORGE = {
+  gh: {
+    pr: new Set(["view", "diff", "list", "checks", "status"]),
+    issue: new Set(["view", "list", "status"]),
+    run: new Set(["view", "list", "watch"]),
+    release: new Set(["view", "list"]),
+    repo: new Set(["view"]),
+    workflow: new Set(["view", "list"]),
+    label: new Set(["list"]),
+    // Names and dates only: gh never prints a secret's value.
+    secret: new Set(["list"]),
+    variable: new Set(["list"]),
+    auth: new Set(["status"]),
+    search: true,
+  },
+  glab: {
+    mr: new Set(["view", "list", "diff"]),
+    issue: new Set(["view", "list"]),
+    // Not `ci view`: it is interactive and can retry or cancel jobs.
+    ci: new Set(["list", "status", "get", "trace"]),
+    repo: new Set(["view"]),
+    release: new Set(["view", "list"]),
+    auth: new Set(["status"]),
+  },
 };
+const FIELD_FLAG = /^(-[fF].*|--(raw-)?field(=.*)?)$/;
+
+// `gh api` and `glab api` send GET unless a method is given or fields are
+// present. With an explicit GET, fields become query parameters.
+function apiRisk(bin, args) {
+  if (args.some((arg) => /^--input(=.*)?$/.test(arg))) return `${bin} api --input sends a request body`;
+  let method = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "-X" || args[i] === "--method") method = args[++i] ?? "";
+    else method = args[i].match(/^(?:-X=?|--method=)(.+)$/)?.[1] ?? method;
+  }
+  method = (method ?? (args.some((arg) => FIELD_FLAG.test(arg)) ? "POST" : "GET")).toUpperCase();
+  return method === "GET" ? null : `${bin} api ${method} writes to the remote`;
+}
+
+// Why a gh or glab command needs the user's yes, or null when it only reads.
+function forgeRisk(bin, args) {
+  const [group, action] = args;
+  if (group === "api") return apiRisk(bin, args.slice(1));
+  if (group === "auth" && args.some((arg) => /^(-t|--show-token)$/.test(arg))) return `${bin} auth --show-token prints the token`;
+  const actions = READ_ONLY_FORGE[bin][group];
+  if (actions === true || actions?.has(action)) return null;
+  return `${[bin, group, action].filter(Boolean).join(" ")} may write to the remote`;
+}
 
 // The git subcommand, past `-C <dir>` and `-c <key=value>` options, which
 // end up in `options`.
@@ -79,14 +126,7 @@ function riskOf(words) {
     if (GIT_WRITES.has(name)) return `git ${name} changes history or shared branches`;
   }
 
-  if (bin === "gh" || bin === "glab") {
-    const [group, action] = args;
-    if (GH_WRITES[group]?.has(action) || (group === "mr" && action !== "view" && action !== "list"))
-      return `${bin} ${group} ${action} writes to the remote`;
-    const flagIndex = args.findIndex((arg) => arg === "-X" || arg === "--method");
-    const method = flagIndex >= 0 ? args[flagIndex + 1] : args.find((arg) => arg.startsWith("--method="))?.slice(9);
-    if (group === "api" && method && method.toUpperCase() !== "GET") return `${bin} api ${method} writes to the remote`;
-  }
+  if (bin === "gh" || bin === "glab") return forgeRisk(bin, args);
 
   const recursive = args.some((arg) => arg === "--recursive" || /^-[a-z]*r[a-z]*$/i.test(arg));
   if (bin === "rm" && recursive) return "rm -r deletes a directory tree";
@@ -109,7 +149,6 @@ const BRANCH_LISTING = /^(--show-current|--list|-a|--all|-r|--remotes|-vv?)$/;
 // Options that run a program or write a file: an external diff or textconv
 // driver, `git grep -O<pager>`, `--output=<file>`, `fetch --upload-pack=<cmd>`.
 const GIT_RUNS_OR_WRITES = /^(--ext-diff|--textconv|-O.*|--open-files-in-pager.*|--output(=.*)?|--upload-pack.*)$/;
-const INSPECTING_GH = { issue: new Set(["view", "list"]), pr: new Set(["view", "diff", "list", "checks", "status"]) };
 const HARMLESS_COMMANDS = new Set(["cat", "head", "tail", "ls", "wc", "grep", "cut", "tr", "echo", "pwd", "cd"]);
 // The only expansion the reviewer may use: a merge-base is a SHA, so it can't
 // smuggle in an option the way `$(echo --output=x)` would.
@@ -163,7 +202,8 @@ function reviewerMayRunSegment(words, config) {
   const args = words.slice(start + 1);
   if (!bin) return true;
   if (bin === "git") return gitMayRun(args);
-  if (bin === "gh") return Boolean(INSPECTING_GH[args[0]]?.has(args[1])) && !args.some((arg) => /^(--web(=.*)?|-\w*w\w*)$/.test(arg));
+  // The guard's read-only list, minus `--web`, which starts a browser.
+  if (bin === "gh" || bin === "glab") return !forgeRisk(bin, args) && !args.some((arg) => /^(--web(=.*)?|-\w*w\w*)$/.test(arg));
   // The plugin's own kit-config: through ${CLAUDE_PLUGIN_ROOT} or the absolute
   // path it expands to, never a relative one inside the project.
   if (bin === "node") return args.length === 1 && /^(PLUGIN_ROOT|[A-Za-z]:|\/).*[\\/]hooks[\\/]kit-config\.mjs$/.test(args[0]);
@@ -175,8 +215,8 @@ function reviewerMayRunSegment(words, config) {
 }
 
 function reviewerMayRun(command, config) {
-  // The prompt names kit-config through ${CLAUDE_PLUGIN_ROOT}, whose braces
-  // would split the segment.
+  // The prompt names kit-config through ${CLAUDE_PLUGIN_ROOT}, which the `$`
+  // check below would refuse.
   let plain = command.replace(/\$\{?CLAUDE_PLUGIN_ROOT\}?/g, "PLUGIN_ROOT").replace(HARMLESS_REDIRECT, " ");
   plain = plain.replace(MERGE_BASE, "MERGE_BASE");
   const mergeBaseNames = [...plain.matchAll(/\b(\w+)=MERGE_BASE\b/g)].map((match) => match[1]);
@@ -190,8 +230,9 @@ function reviewerMayRun(command, config) {
   if ((plain.match(quoted) ?? []).some((text) => text.includes("\n"))) return false;
   if (/[<>\\]|@"|(^|\s)#/.test(plain.replace(quoted, '""'))) return false;
   // With no expansion left, quoted text is plain text: a `(` or `|` in it
-  // must not split the command.
-  const unsplittable = plain.replace(quoted, (text) => text.replace(/[(){}|;&]/g, "_"));
+  // must not split the command, and a space must not split the word, or
+  // `-f "t=x -X GET"` would look like a GET.
+  const unsplittable = plain.replace(quoted, (text) => text.replace(/[(){}|;&\s]/g, "_"));
   return commandSegments(unsplittable).every((words) => reviewerMayRunSegment(words, config));
 }
 
@@ -211,7 +252,7 @@ if (blockedSecret) {
 
 if (shellTool && input?.agent_type === REVIEWER && !reviewerMayRun(toolInput.command ?? "", config)) {
   console.error(
-    "Blocked: the reviewer is read-only. It may run git and gh commands that inspect, the project's check scripts, kit-config and plain file readers, without redirects into files. Report the change you wanted to make as a finding instead.",
+    "Blocked: the reviewer is read-only. It may run git, gh and glab commands that inspect, the project's check scripts, kit-config and plain file readers, without redirects into files. Report the change you wanted to make as a finding instead.",
   );
   process.exit(2);
 }

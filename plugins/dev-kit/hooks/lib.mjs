@@ -244,9 +244,26 @@ export function commandSegments(command, { blankQuotes = false } = {}) {
     .replace(/@(['"])[\s\S]*?\1@/g, "")
     .replace(/"(?:\\.|[^"\\])*"|'[^']*'/g, (quoted) => (blankQuotes ? '""' : quoted.slice(1, -1)));
   return text
-    .split(/&&|\|\||[;|&\n(){}]/)
-    .map((segment) => segment.trim().split(/\s+/).filter(Boolean))
+    .split(/&&|\|\||[;|&\n()]/)
+    .flatMap((segment) => splitAtGroupBraces(segment.trim().split(/\s+/)))
     .filter((words) => words.length > 0);
+}
+
+// A brace with no partner in its word opens or closes a group, as in bash
+// `{ git push; }` or PowerShell `ForEach-Object {gh pr merge $_}`: the
+// commands inside are segments of their own. A matched pair is text, as in
+// `${HOME}` or `gh api repos/{owner}/{repo}`.
+function splitAtGroupBraces(words) {
+  const segments = [[]];
+  for (const word of words) {
+    const opens = word.startsWith("{") && !word.includes("}");
+    const closes = word.endsWith("}") && !word.includes("{");
+    if (opens) segments.push([]);
+    const text = opens ? word.slice(1) : closes ? word.slice(0, -1) : word;
+    if (text) segments.at(-1).push(text);
+    if (closes) segments.push([]);
+  }
+  return segments;
 }
 
 // Prefixes that run the next word as the real command.

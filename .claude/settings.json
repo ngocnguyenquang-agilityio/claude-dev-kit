@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "dev-kit@claude-dev-kit": true
+  }
+}

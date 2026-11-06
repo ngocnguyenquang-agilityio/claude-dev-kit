@@ -27,7 +27,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | Hook | What it does |
 |---|---|
 | SessionStart | Puts the working rules, the branch, the checks and this branch's handoff note into the session. A plugin cannot ship `CLAUDE.md`, so this stands in for it. |
-| Safety guard | Blocks reading or editing `.env*`, keys, `~/.ssh` and credential files. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, `rm -r`, and `gh`/`glab` writes. Keeps the `reviewer` agent read-only: its Bash calls may only inspect. |
+| Safety guard | Blocks reading or editing `.env*`, keys, `~/.ssh` and credential files. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, `rm -r`, and any `gh`/`glab` command not on its read-only list (`pr view`, `run list`, `api` with GET and no body, ...). Keeps the `reviewer` agent read-only: its Bash calls may only inspect. |
 | Package-manager guard | Blocks the package managers the project's lockfile does not use. No lockfile, no enforcement. |
 | Format on edit | Runs Prettier and `eslint --fix` on the edited file, when the project has them. |
 | Stop checks | At the end of a turn that changed code: typecheck, lint, and the tests related to the changed files. Failures go back to Claude. A passing run is remembered in `.git/dev-kit-stop-checks`, so the checks run again only after the code or the check commands change. |
@@ -115,7 +115,7 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 node --test tests/hooks.test.mjs
 ```
 
-193 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
+248 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
 
 Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug`, `grill` and `plan`: each checks that the skill fires and that the answer follows it. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
 

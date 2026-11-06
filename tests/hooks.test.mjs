@@ -240,6 +240,33 @@ describe("safety-guard", () => {
     "gh pr merge 3",
     "gh issue close 4",
     "gh api repos/o/r/issues -X POST",
+    "gh api repos/{owner}/{repo}/issues/1/comments -f body=x",
+    "gh api repos/{owner}/{repo}/pulls/1/comments -X POST",
+    "gh api repos/o/r/issues -F title=x",
+    "gh api repos/o/r/issues -fbody=x",
+    "gh api repos/o/r/issues --field=title=x",
+    "gh api repos/o/r/issues --raw-field title=x",
+    "gh api repos/o/r/issues --input body.json",
+    "gh api repos/o/r/issues -X GET --input=body.json",
+    "gh api repos/o/r/issues -XPOST",
+    "gh api repos/o/r/issues --method PATCH",
+    "gh api repos/o/r/issues --method=DELETE",
+    "gh run rerun 12",
+    "gh run cancel 12",
+    "gh workflow run ci.yml",
+    "gh repo delete o/r --yes",
+    "gh secret set TOKEN",
+    "gh label create bug",
+    "gh auth token",
+    "gh auth status --show-token",
+    "gh pr checkout 3",
+    "glab mr merge 3",
+    "glab ci view",
+    "glab ci retry 12",
+    "glab api projects/1/issues -f title=x",
+    "f() { git push; }",
+    "if ($true) {git push}",
+    "1..3 | ForEach-Object {gh pr merge $_}",
     "rm -rf dist",
     "Remove-Item -Recurse -Force build",
   ]) {
@@ -260,6 +287,26 @@ describe("safety-guard", () => {
     "gh pr checks",
     "gh issue list",
     "gh api repos/o/r/issues",
+    "gh pr view --json number,url",
+    "gh pr list --state all -L 1",
+    "gh pr list --state merged --base main --search \"merged:>2026-01-01\"",
+    "gh run list --branch fix/x -L 5 --json databaseId,conclusion,name",
+    "gh run view 123 --log-failed",
+    "gh run watch 123",
+    "gh issue view 12",
+    "gh issue list --state all -L 1",
+    "gh api repos/{owner}/{repo}/pulls/3/comments",
+    "gh api search/issues -X GET -f q=x",
+    "gh api repos/o/r --method=get",
+    "gh release list",
+    "gh label list",
+    "gh secret list",
+    "gh variable list",
+    "gh search prs --author @me",
+    "gh auth status",
+    "glab mr view 3",
+    "glab ci trace 12",
+    "glab api projects/1/issues",
     "rm file.txt",
     "echo \"git commit is blocked\"",
     "pnpm test",
@@ -284,7 +331,7 @@ describe("safety-guard", () => {
     });
   }
 
-  for (const command of ["cat .env", "type \".env.local\"", "grep TOKEN .env", "Get-Content .env", "head -5 ~/.ssh/id_rsa", "cp .env /tmp/x"]) {
+  for (const command of ["cat .env", "type \".env.local\"", "grep TOKEN .env", "Get-Content .env", "head -5 ~/.ssh/id_rsa", "cp .env /tmp/x", "Get-ChildItem | ForEach-Object {Get-Content .env}"]) {
     it(`blocks "${command}"`, () => {
       assert.equal(runHook("safety-guard.mjs", project, bash(command)).code, 2);
     });
@@ -298,6 +345,21 @@ describe("safety-guard", () => {
     const strict = makeProject({ "package.json": {}, ".claude/kit.json": { guard: { git: "deny" } } });
 
     assert.equal(runHook("safety-guard.mjs", strict, bash("git push")).code, 2);
+  });
+
+  it("blocks gh writes but still lets gh reads through when guard.git is deny", () => {
+    const strict = makeProject({ "package.json": {}, ".claude/kit.json": { guard: { git: "deny" } } });
+
+    assert.equal(runHook("safety-guard.mjs", strict, bash("gh api repos/{owner}/{repo}/issues/1/comments -f body=x")).code, 2);
+    assert.equal(runHook("safety-guard.mjs", strict, bash("gh run rerun 12")).code, 2);
+    assert.deepEqual(runHook("safety-guard.mjs", strict, bash("gh api repos/{owner}/{repo}/pulls/3/comments")), { code: 0, out: "", err: "" });
+  });
+
+  it("lets gh writes through when guard.git is off", () => {
+    const relaxed = makeProject({ "package.json": {}, ".claude/kit.json": { guard: { git: "off" } } });
+
+    assert.deepEqual(runHook("safety-guard.mjs", relaxed, bash("gh api repos/{owner}/{repo}/pulls/1/comments -X POST")), { code: 0, out: "", err: "" });
+    assert.deepEqual(runHook("safety-guard.mjs", relaxed, bash("gh repo delete o/r --yes")), { code: 0, out: "", err: "" });
   });
 
   it("stops asking when guard.git is off, but still blocks secrets", () => {
@@ -336,6 +398,8 @@ describe("safety-guard", () => {
     "git stash list",
     "gh issue view 12",
     "gh pr diff 3",
+    "gh api repos/{owner}/{repo}/pulls/3/comments",
+    "glab mr view 3",
     "pnpm run lint",
     "pnpm typecheck",
     "pnpm test",
@@ -397,6 +461,10 @@ describe("safety-guard", () => {
     "pnpm run build",
     "gh issue comment 12 --body x",
     "gh api repos/o/r/issues -f title=x",
+    "gh api repos/{owner}/{repo}/pulls/3/comments -X POST",
+    "gh run rerun 12",
+    "glab mr view 3 --web",
+    "gh api repos/o/r/issues -f \"title=x -X GET\"",
   ]) {
     it(`blocks the reviewer from running "${command}"`, () => {
       const result = runHook("safety-guard.mjs", project, fromReviewer(command));
