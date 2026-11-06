@@ -225,6 +225,8 @@ describe("package-manager-guard", () => {
 
 describe("safety-guard", () => {
   const project = pnpmProject();
+  // `git checkout README.md` must read as a path, not a branch.
+  fs.writeFileSync(path.join(project, "README.md"), "");
 
   for (const command of [
     "git commit -m x",
@@ -269,6 +271,37 @@ describe("safety-guard", () => {
     "1..3 | ForEach-Object {gh pr merge $_}",
     "rm -rf dist",
     "Remove-Item -Recurse -Force build",
+    "git checkout -- .",
+    "git checkout .",
+    "git checkout README.md",
+    "git checkout main -- src/a.js",
+    "git checkout src/*.js",
+    "git checkout -f main",
+    "git checkout --theirs a.js",
+    "git checkout -p",
+    "git checkout -B main",
+    "git restore src/a.js",
+    "git restore .",
+    "git restore --staged --worktree a.js",
+    "git restore -S -W a.js",
+    "git switch -C main",
+    "git switch --force-create main",
+    "git switch -f main",
+    "git switch --discard-changes main",
+    "git rm -f a.js",
+    "git rm -rf src",
+    "git rm -fr src",
+    "git checkout -fq main",
+    "git switch -fq main",
+    "Remove-Item -r dist",
+    "Remove-Item -rec dist",
+    "Remove-Item -Recurse:$true dist",
+    "ri -Recurse dist",
+    "rd /s dist",
+    "rd /S /Q dist",
+    "rmdir -r dist",
+    "del /s *.log",
+    "erase /s *.log",
   ]) {
     it(`asks before "${command}"`, () => {
       const { code, out } = runHook("safety-guard.mjs", project, bash(command));
@@ -308,6 +341,19 @@ describe("safety-guard", () => {
     "glab ci trace 12",
     "glab api projects/1/issues",
     "rm file.txt",
+    "git checkout main",
+    "git checkout -b feat/x",
+    "git checkout -b feat/x origin/feat/x",
+    "git checkout feat/x",
+    "git switch main",
+    "git switch -c feat/x",
+    "git restore --staged a.js",
+    "git restore -S a.js",
+    "git rm --cached a.js",
+    "Remove-Item a.txt",
+    "Remove-Item -Recurse:$false a.txt",
+    "rd empty-dir",
+    "del a.txt",
     "echo \"git commit is blocked\"",
     "pnpm test",
   ]) {
@@ -315,6 +361,16 @@ describe("safety-guard", () => {
       assert.deepEqual(runHook("safety-guard.mjs", project, bash(command)), { code: 0, out: "", err: "" });
     });
   }
+
+  it("resolves a checkout path against the shell's cwd", () => {
+    const sub = path.join(project, "pkg");
+    fs.mkdirSync(sub, { recursive: true });
+    fs.writeFileSync(path.join(sub, "only-here.js"), "");
+    const checkout = (cwd, file) => runHook("safety-guard.mjs", project, { ...bash(`git checkout ${file}`), cwd });
+
+    assert.equal(JSON.parse(checkout(sub, "only-here.js").out).hookSpecificOutput.permissionDecision, "ask");
+    assert.equal(checkout(sub, "README.md").out, "");
+  });
 
   for (const target of [".env", ".env.local", "apps/web/.env.production", "certs/server.pem", "id_rsa", ".ssh/config", "C:\\Users\\x\\.aws\\credentials"]) {
     it(`blocks Read of ${target}`, () => {
