@@ -6,14 +6,14 @@ The safety guard asks the user before every `gh`/`glab` command that can write t
 
 ## Tasks
 
-- [ ] Check `gh`/`glab` commands with `{` and `}` kept inside the word, so the `{owner}/{repo}` placeholders the skills use no longer split one command into several segments.
-- [ ] In `plugins/dev-kit/hooks/safety-guard.mjs`, replace the `GH_WRITES` denylist in `riskOf` with an allowlist of read-only `gh` group/action pairs, for example `pr view|diff|list|checks|status`, `issue view|list|status`, `run view|list`, `release view|list`, `repo view`, `workflow view|list`, `search`, and `auth status` without `--show-token`. Anything else gets an "ask". `auth token` stays off the list.
-- [ ] Decide which other read-only verbs to allow rather than prompt: `label list`, `secret list`, `variable list`, `run watch`.
-- [ ] `gh api` is read-only only when the method is GET (default or explicit) and no body flag is present. Match the separate and the attached forms: `-f`/`-fkey=v`, `-F`/`-Fkey=v`, `--field`/`--field=k=v`, `--raw-field`/`--raw-field=k=v`, `--input`/`--input=file`, and for the method `-X POST`, `-XPOST`, `--method POST`, `--method=POST`. `gh api -X GET -f q=x` stays read-only, because GET sends the fields as query parameters.
-- [ ] Give `glab` the same treatment, with its read-only verbs: `mr view|list|diff`, `issue view|list`, `ci list|status|get|trace`, `repo view`, `release view|list`, `auth status`, and `api` with the same GET rule. `glab ci view` is interactive and can retry or cancel jobs, so it asks.
-- [ ] Decide whether the reviewer's `INSPECTING_GH` and the new allowlist share one definition, so the two lists cannot drift.
-- [ ] Add tests in `tests/hooks.test.mjs`: each previously missed write asks (`api -f`, `api -F`, `api --input`, an attached form such as `api -fbody=x`, `api -XPOST`, the `{owner}/{repo}` forms, `run rerun`, `run cancel`, `workflow run`, `repo delete`, `secret set`, `label create`), and every read the skills rely on runs without a prompt.
-- [ ] Update the Safety guard row and the test count in `README.md`.
+- [x] Check `gh`/`glab` commands with `{` and `}` kept inside the word, so the `{owner}/{repo}` placeholders the skills use no longer split one command into several segments.
+- [x] In `plugins/dev-kit/hooks/safety-guard.mjs`, replace the `GH_WRITES` denylist in `riskOf` with an allowlist of read-only `gh` group/action pairs, for example `pr view|diff|list|checks|status`, `issue view|list|status`, `run view|list`, `release view|list`, `repo view`, `workflow view|list`, `search`, and `auth status` without `--show-token`. Anything else gets an "ask". `auth token` stays off the list.
+- [x] Decide which other read-only verbs to allow rather than prompt: `label list`, `secret list`, `variable list`, `run watch`.
+- [x] `gh api` is read-only only when the method is GET (default or explicit) and no body flag is present. Match the separate and the attached forms: `-f`/`-fkey=v`, `-F`/`-Fkey=v`, `--field`/`--field=k=v`, `--raw-field`/`--raw-field=k=v`, `--input`/`--input=file`, and for the method `-X POST`, `-XPOST`, `--method POST`, `--method=POST`. `gh api -X GET -f q=x` stays read-only, because GET sends the fields as query parameters.
+- [x] Give `glab` the same treatment, with its read-only verbs: `mr view|list|diff`, `issue view|list`, `ci list|status|get|trace`, `repo view`, `release view|list`, `auth status`, and `api` with the same GET rule. `glab ci view` is interactive and can retry or cancel jobs, so it asks.
+- [x] Decide whether the reviewer's `INSPECTING_GH` and the new allowlist share one definition, so the two lists cannot drift.
+- [x] Add tests in `tests/hooks.test.mjs`: each previously missed write asks (`api -f`, `api -F`, `api --input`, an attached form such as `api -fbody=x`, `api -XPOST`, the `{owner}/{repo}` forms, `run rerun`, `run cancel`, `workflow run`, `repo delete`, `secret set`, `label create`), and every read the skills rely on runs without a prompt.
+- [x] Update the Safety guard row and the test count in `README.md`.
 
 ## Acceptance criteria
 

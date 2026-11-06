@@ -4,7 +4,7 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 
 | # | Title | Status | Depends on |
 |---|---|---|---|
-| 15 | [Safety guard: ask before any gh or glab command that is not read-only](15-gh-read-only-allowlist.md) | open | none |
+| 15 | [Safety guard: ask before any gh or glab command that is not read-only](15-gh-read-only-allowlist.md) | closed | none |
 | 16 | [Safety guard: ask before discarding work or deleting a directory tree](16-guard-discard-and-recursive-delete.md) | open | #15 |
 | 17 | [Safety guard: block more credential files](17-more-secret-files.md) | open | #16 |
 
