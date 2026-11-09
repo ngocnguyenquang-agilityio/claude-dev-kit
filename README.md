@@ -27,7 +27,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | Hook | What it does |
 |---|---|
 | SessionStart | Puts the working rules, the branch, the checks and this branch's handoff note into the session. A plugin cannot ship `CLAUDE.md`, so this stands in for it. |
-| Safety guard | Blocks reading or editing `.env*`, keys, `~/.ssh` and credential files. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, commands that throw away uncommitted changes (`git checkout -- <path>`, `git restore`, `git switch -C`, `git rm -f`), recursive deletes (`rm -r`, `Remove-Item -r`, `rd /s`, `del /s`), and any `gh`/`glab` command not on its read-only list (`pr view`, `run list`, `api` with GET and no body, ...). Keeps the `reviewer` agent read-only: its Bash calls may only inspect. |
+| Safety guard | Blocks reading or editing secret files: `.env*`, `.envrc`, keys (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`...), `.netrc`, `.git-credentials`, `.pypirc`, `*.tfvars`, `credentials.json`, `~/.npmrc`, `.docker/config.json` and anything under `.ssh`, `.aws`, `.gnupg` or `.kube`. The guard lets `.example`, `.sample`, `.template` and `.dist` copies through; the `permissions.deny` example below does not. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, commands that throw away uncommitted changes (`git checkout -- <path>`, `git restore`, `git switch -C`, `git rm -f`), recursive deletes (`rm -r`, `Remove-Item -r`, `rd /s`, `del /s`), and any `gh`/`glab` command not on its read-only list (`pr view`, `run list`, `api` with GET and no body, ...). Keeps the `reviewer` agent read-only: its Bash calls may only inspect. |
 | Package-manager guard | Blocks the package managers the project's lockfile does not use. No lockfile, no enforcement. |
 | Format on edit | Runs Prettier and `eslint --fix` on the edited file, when the project has them. |
 | Stop checks | At the end of a turn that changed code: typecheck, lint, and the tests related to the changed files. Failures go back to Claude. A passing run is remembered in `.git/dev-kit-stop-checks`, so the checks run again only after the code or the check commands change. |
@@ -79,14 +79,22 @@ Every key is optional:
 
 - `guard.git`: `"ask"` (default) prompts you each time, `"deny"` blocks outright, `"off"` disables the check. Secret-file blocking stays on regardless.
 
-The safety guard matches patterns in the command text. It catches mistakes, not a determined reader: a secret read through `node -e` or `python -c`, a PowerShell `[IO.File]` call, a glob (`cat .en*`) or a variable (`f=.env; cat $f`) gets past it. Two settings in the project's `.claude/settings.json` go further:
+The safety guard matches patterns in the command text. It catches mistakes, not a determined reader: a secret read through `node -e` or `python -c`, a PowerShell `[IO.File]` call, a glob (`cat .en*`), a variable (`f=.env; cat $f`) or an earlier `cd` (`cd ~ && cat .npmrc`) gets past it. Two settings in the project's `.claude/settings.json` go further:
 
 - `permissions.deny`, enforced by Claude Code, covers its file tools and the file commands it recognizes in Bash (`cat`, `head`, redirections). A script that opens the file itself, such as `node -e`, still gets through.
 - The sandbox (`sandbox.enabled` with `sandbox.filesystem.denyRead`) is enforced by the operating system for every shell command and its child processes. It runs on macOS, Linux and WSL2, not on native Windows.
 
 ```json
 {
-  "permissions": { "deny": ["Read(./.env*)", "Read(~/.ssh/**)"] },
+  "permissions": {
+    "deny": [
+      "Read(**/.env*)", "Read(**/*.pem)", "Read(**/*.key)", "Read(**/*.p12)", "Read(**/*.pfx)",
+      "Read(**/id_rsa)", "Read(**/id_dsa)", "Read(**/id_ecdsa)", "Read(**/id_ed25519)",
+      "Read(**/.netrc)", "Read(**/.git-credentials)", "Read(**/.pypirc)", "Read(**/*.tfvars)", "Read(**/*.tfvars.json)",
+      "Read(**/credentials.json)", "Read(~/.npmrc)", "Read(**/.docker/config.json)",
+      "Read(**/.ssh/**)", "Read(**/.aws/**)", "Read(**/.gnupg/**)", "Read(**/.kube/**)"
+    ]
+  },
   "sandbox": { "enabled": true, "filesystem": { "denyRead": ["~/.ssh"] } }
 }
 ```
@@ -115,7 +123,7 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 node --test tests/hooks.test.mjs
 ```
 
-293 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
+316 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
 
 Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug`, `grill` and `plan`: each checks that the skill fires and that the answer follows it. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
 

@@ -397,6 +397,56 @@ describe("safety-guard", () => {
     assert.equal(runHook("safety-guard.mjs", project, bash("cat .env.example")).code, 0);
   });
 
+  const credentialFiles = [
+    ".git-credentials",
+    "~/.pypirc",
+    ".envrc",
+    "infra/prod.tfvars",
+    "infra/prod.tfvars.json",
+    "credentials.json",
+    "~/.kube/config",
+    "~/.docker/config.json",
+    "~/.npmrc",
+  ];
+  for (const target of credentialFiles) {
+    it(`blocks Read, cat and Get-Content of ${target}`, () => {
+      assert.equal(runHook("safety-guard.mjs", project, { tool_name: "Read", tool_input: { file_path: target } }).code, 2);
+      assert.equal(runHook("safety-guard.mjs", project, bash(`cat ${target}`)).code, 2);
+      assert.equal(runHook("safety-guard.mjs", project, { tool_name: "PowerShell", tool_input: { command: `Get-Content ${target}` } }).code, 2);
+    });
+  }
+
+  it("blocks cat of the home .npmrc as Git Bash writes it", { skip: process.platform !== "win32" }, () => {
+    const gitBashPath = path.join(os.homedir(), ".npmrc").replace(/\\/g, "/").replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`);
+    assert.equal(runHook("safety-guard.mjs", project, bash(`cat ${gitBashPath}`)).code, 2);
+  });
+
+  const homeNpmrcSpellings = [
+    "$HOME/.npmrc",
+    "~/./.npmrc",
+    "$env:USERPROFILE\\.npmrc",
+    "${env:USERPROFILE}\\.npmrc",
+    "%USERPROFILE%\\.npmrc",
+    path.join(os.homedir(), ".npmrc"),
+  ];
+  for (const target of homeNpmrcSpellings) {
+    it(`blocks cat of the home .npmrc written as ${target}`, () => {
+      assert.equal(runHook("safety-guard.mjs", project, bash(`cat ${target}`)).code, 2);
+    });
+  }
+
+  it("blocks cat .npmrc when the shell is in the home folder", () => {
+    assert.equal(runHook("safety-guard.mjs", project, { ...bash("cat .npmrc"), cwd: os.homedir() }).code, 2);
+  });
+
+  for (const target of [".npmrc", "packages/web/.npmrc", "terraform.tfvars.example", ".envrc.sample", "config.json", ".docker/daemon.json"]) {
+    it(`allows Read, cat and Get-Content of ${target}`, () => {
+      assert.equal(runHook("safety-guard.mjs", project, { tool_name: "Read", tool_input: { file_path: target } }).code, 0);
+      assert.equal(runHook("safety-guard.mjs", project, bash(`cat ${target}`)).code, 0);
+      assert.equal(runHook("safety-guard.mjs", project, { tool_name: "PowerShell", tool_input: { command: `Get-Content ${target}` } }).code, 0);
+    });
+  }
+
   it("blocks instead of asking when guard.git is deny", () => {
     const strict = makeProject({ "package.json": {}, ".claude/kit.json": { guard: { git: "deny" } } });
 

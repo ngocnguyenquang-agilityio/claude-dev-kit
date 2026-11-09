@@ -6,12 +6,12 @@ The safety guard blocks the common credential files, not only `.env*`, keys, `~/
 
 ## Tasks
 
-- [ ] Extend `SECRET_NAME` in `plugins/dev-kit/hooks/safety-guard.mjs` with `.git-credentials`, `.pypirc`, `.envrc`, `*.tfvars`, `*.tfvars.json` and `credentials.json`, and `SECRET_DIR` with `.kube/`.
-- [ ] `.docker/config.json` fits neither list: `SECRET_NAME` matches only the basename (`config.json`) and `SECRET_DIR` only folders. Add a path-suffix match for it, or block the whole `.docker/` folder.
-- [ ] Decide on `.npmrc` and `.envrc`. The guard never sees the package manager or direnv read them; blocking only stops Claude's Read, Edit and Write tools and its shell readers. The cost is that Claude can no longer edit a project `.npmrc` (registry, `auto-install-peers`) or an `.envrc`. Options: block every copy, block only `~/.npmrc` (where the auth token usually lives), or leave it out.
-- [ ] Keep the example exemption: `terraform.tfvars.example` and `.envrc.sample` stay readable through `SECRET_EXAMPLE`.
-- [ ] Add tests in `tests/hooks.test.mjs` for each new file through the Read tool and through a shell reader (`cat`, `Get-Content`), and for the example variants.
-- [ ] Update the Safety guard row, the `permissions.deny` example and the test count in `README.md`, so the listed files match the code.
+- [x] Extend `SECRET_NAME` in `plugins/dev-kit/hooks/safety-guard.mjs` with `.git-credentials`, `.pypirc`, `.envrc`, `*.tfvars`, `*.tfvars.json` and `credentials.json`, and `SECRET_DIR` with `.kube/`.
+- [x] `.docker/config.json` fits neither list: `SECRET_NAME` matches only the basename (`config.json`) and `SECRET_DIR` only folders. Add a path-suffix match for it, or block the whole `.docker/` folder.
+- [x] Decide on `.npmrc` and `.envrc`. The guard never sees the package manager or direnv read them; blocking only stops Claude's Read, Edit and Write tools and its shell readers. The cost is that Claude can no longer edit a project `.npmrc` (registry, `auto-install-peers`) or an `.envrc`. Options: block every copy, block only `~/.npmrc` (where the auth token usually lives), or leave it out.
+- [x] Keep the example exemption: `terraform.tfvars.example` and `.envrc.sample` stay readable through `SECRET_EXAMPLE`.
+- [x] Add tests in `tests/hooks.test.mjs` for each new file through the Read tool and through a shell reader (`cat`, `Get-Content`), and for the example variants.
+- [x] Update the Safety guard row, the `permissions.deny` example and the test count in `README.md`, so the listed files match the code.
 
 ## Acceptance criteria
 
