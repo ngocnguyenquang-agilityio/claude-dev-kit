@@ -11,27 +11,54 @@
 // This is pattern matching on the command text, a guard against mistakes, not
 // a security boundary. It misses a secret read through an interpreter
 // (`node -e`, `python -c`), a PowerShell .NET call (`[IO.File]::ReadAllText`),
-// a glob (`cat .en*`) or a variable (`f=.env; cat $f`). `permissions.deny`
+// a glob (`cat .en*`), a variable (`f=.env; cat $f`) or a `cd` earlier in the
+// command (`cd ~ && cat .npmrc`). `permissions.deny`
 // rules miss interpreters too; only the Claude Code sandbox stops every
 // process (see the README).
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { binaryName, commandIndex, commandSegments, loadConfig, projectDir, readStdinJson } from "./lib.mjs";
 
 const SECRET_NAME = [
   /^\.env(\..+)?$/,
+  /^\.envrc$/,
   /\.(pem|key|p12|pfx)$/,
   /^id_(rsa|dsa|ecdsa|ed25519)$/,
-  /^\.netrc$/,
+  /^\.(netrc|git-credentials|pypirc)$/,
+  /\.tfvars(\.json)?$/,
+  /^credentials\.json$/,
 ];
 const SECRET_EXAMPLE = /\.(example|sample|template|dist)$/;
-const SECRET_DIR = /(^|\/)(\.ssh|\.aws|\.gnupg)(\/|$)/;
+const SECRET_DIR = /(^|\/)(\.ssh|\.aws|\.gnupg|\.kube)(\/|$)/;
+// `config.json` alone is too common a name to block.
+const SECRET_SUFFIX = /(^|\/)\.docker\/config\.json$/;
+// Only the home .npmrc: it holds the registry token, while a project .npmrc
+// holds settings Claude may need to edit.
+const HOME_PREFIX = /^(~|\$home|\$\{home\}|\$env:(home|userprofile)|\$\{env:(home|userprofile)\}|%userprofile%)\//;
+const HOME_NPMRC = toSlashes(path.join(os.homedir(), ".npmrc"));
 
-function isSecretPath(raw) {
-  const normalized = raw.replace(/\\/g, "/").toLowerCase();
+function toSlashes(raw) {
+  return raw.replace(/\\/g, "/").toLowerCase();
+}
+
+function isHomeNpmrc(normalized, baseDir) {
+  if (HOME_PREFIX.test(normalized)) return path.posix.normalize(normalized.replace(HOME_PREFIX, "")) === ".npmrc";
+  // Git Bash on Windows writes C:\ as /c/.
+  const native = process.platform === "win32" ? normalized.replace(/^\/([a-z])\//, "$1:/") : normalized;
+  return toSlashes(path.resolve(baseDir, native)) === HOME_NPMRC;
+}
+
+function isSecretPath(raw, baseDir) {
+  const normalized = toSlashes(raw);
   const name = path.posix.basename(normalized);
   if (SECRET_EXAMPLE.test(name)) return false;
-  return SECRET_DIR.test(normalized) || SECRET_NAME.some((pattern) => pattern.test(name));
+  return (
+    SECRET_DIR.test(normalized) ||
+    SECRET_SUFFIX.test(normalized) ||
+    SECRET_NAME.some((pattern) => pattern.test(name)) ||
+    (name === ".npmrc" && isHomeNpmrc(normalized, baseDir))
+  );
 }
 
 // Commands that print, copy or search a file's contents.
@@ -40,10 +67,10 @@ const READERS = new Set([
   "cp", "copy", "scp", "base64", "xxd", "od", "get-content", "gc", "select-string", "sls", "source", ".",
 ]);
 
-function readsSecret(command) {
+function readsSecret(command, baseDir) {
   return commandSegments(command).some((words) => {
     const start = commandIndex(words);
-    return READERS.has(binaryName(words[start])) && words.slice(start + 1).some(isSecretPath);
+    return READERS.has(binaryName(words[start])) && words.slice(start + 1).some((word) => isSecretPath(word, baseDir));
   });
 }
 
@@ -286,7 +313,7 @@ const shellTool = input?.tool_name === "Bash" || input?.tool_name === "PowerShel
 const shellDir = input?.cwd ?? projectDir;
 
 const target = shellTool ? null : (toolInput.file_path ?? toolInput.path);
-const blockedSecret = shellTool ? readsSecret(toolInput.command ?? "") : target && isSecretPath(target);
+const blockedSecret = shellTool ? readsSecret(toolInput.command ?? "", shellDir) : target && isSecretPath(target, shellDir);
 if (blockedSecret) {
   console.error(
     "Blocked: this touches a secret file (.env*, key, credential or ~/.ssh). Ask the user for the names of the variables you need, or for a redacted copy, instead of reading the file.",
