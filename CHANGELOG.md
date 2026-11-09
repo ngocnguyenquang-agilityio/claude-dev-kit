@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 - 2026-11-09
+
+- Changed: `debug` gates each step (a red loop before hunting the cause, the cause in one sentence before any fix), reverts a failed fix instead of stacking another, and stops to ask after 3 failed fixes. It writes the regression test before the fix, has a short red-flags list and a default report format, and moves tracing techniques to `references/tracing.md`.
+- Changed: `issue fix` and `pr-followup ci` defer to `debug` instead of restating its rules.
+- Added: `debug-flaky` and `debug-no-repro` evals, and `debug-root-cause` now grades the cause, the fix at the source and the named regression test separately.
+
 ## 0.4.0 - 2026-11-05
 
 - Breaking: `new-issue`, `start-issue`, `finish-issue` and `hotfix` are now `/dev-kit:issue new|start|finish|fix`, and `commit-msg` and `pr-body` are now `/dev-kit:ship commit|pr`. The old names are removed, with no aliases.
