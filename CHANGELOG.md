@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.4 - 2026-11-10
+
+- Changed: `review` still checks the spec when the work has no issue. It passes the reviewer the plan the user approved, or else the user's request, pasted into the prompt; the reviewer turns each plan step or ask into a spec table row. The Spec axis is skipped only when none of the three exists.
+- Changed: the working rules name fallbacks next to error handling and config ("No error handling, fallbacks or config for cases that cannot happen").
+
 ## 0.4.3 - 2026-11-10
 
 - Fixed: `issue finish` puts the status docs in the same commit and PR as the work instead of a separate "mark issue done" PR. It checks the branch's PR state first: it pushes to an open PR without `gh pr create`, and stops on a merged one. `ship commit` (on the commit that completes the issue) and `ship pr` suggest `issue finish` first when the issue's status docs are untouched.

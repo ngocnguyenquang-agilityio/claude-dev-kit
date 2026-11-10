@@ -8,7 +8,7 @@
 - At the end of a unit of work that changed any file, docs and config included, run the `review` skill before reporting back and before handing over commit commands.
 
 **Code**
-- Prefer deleting code over adding abstractions. No error handling or config for cases that cannot happen.
+- Prefer deleting code over adding abstractions. No error handling, fallbacks or config for cases that cannot happen.
 
 **Scope**
 - Do exactly what was asked. Note out-of-scope problems as follow-ups instead of fixing them. Ask before adding a dependency.
