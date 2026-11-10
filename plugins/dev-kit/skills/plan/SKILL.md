@@ -9,7 +9,7 @@ Turn the request into an ordered list of small steps. Each step must be independ
 
 ## Process
 
-1. Restate the goal in one sentence. If the `grill` skill just ran in this session, start from its settled decisions instead of re-asking.
+1. Restate the goal in one sentence. If the `grill` skill just ran in this session, start from its Decisions and Assumptions instead of re-asking.
 2. Read the relevant code first. Reuse existing functions and patterns; list them by path.
 3. Write the steps. Each step, including a final checks or review step, has:
    - **What** changes (files or areas).
