@@ -5,7 +5,7 @@ Bring the current `<type>/<slug>` branch to a ready-to-commit state. You commit,
 1. **Identify.**
    - **Type**: `branch.type` from the config. If it is `null` (the branch isn't `<type>/<slug>`), ask the user for the type.
    - **Issue `N`**: follow `references/issue-number.md` in this skill's folder.
-   - With `N`, read the issue: `<issuesDir>/<NN>-*.md` when `issuesDir` is set, else `gh issue view N`. With no issue, there is no spec: skip step 4.
+   - With `N`, read the issue: `<issuesDir>/<NN>-*.md` when `issuesDir` is set, else `gh issue view N`. With no issue, there are no status docs: skip step 4.
    - If you started this mode on your own (the user didn't type `/dev-kit:issue finish`) and there is an issue, confirm with the user that it is done before going on, because step 4 marks it closed.
    - **PR state**: run `gh pr view --json state`. "no pull requests found" or `CLOSED` means no PR yet. `OPEN` means the new commit goes in by push only, with no `gh pr create`. `MERGED` means this branch is done and any new commit would need a second PR: stop. Tell the user to start a new branch from `<baseBranch>` for further work, and that the issue's tick and status cell can ride in that branch's first commit.
 2. **Checks green.** Run every command under `checks` in the config. Done when all pass. Fix failures before going on. A check that is `null` doesn't exist here: say "not verified" for it in the report.
