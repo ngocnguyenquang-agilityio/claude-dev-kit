@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 - 2026-11-10
+
+- Changed: `grill` asks only questions whose answer changes the work, at most 4 per round, and puts small choices under Assumptions. It looks facts up with an `Explore` sub-agent without blocking the interview, uses `AskUserQuestion` when a question has clear options, and pushes back once on conflicting or risky answers. Its summary has fixed sections (Decisions, Assumptions, Out of scope, Open risks), which `plan` starts from.
+- Added: `grill-repo-fact` and `grill-pushback` evals; `grill-vague-request` fails a round of more than 4 questions.
+
 ## 0.4.1 - 2026-11-09
 
 - Changed: `debug` gates each step (a red loop before hunting the cause, the cause in one sentence before any fix), reverts a failed fix instead of stacking another, and stops to ask after 3 failed fixes. It writes the regression test before the fix, has a short red-flags list and a default report format, and moves tracing techniques to `references/tracing.md`.
