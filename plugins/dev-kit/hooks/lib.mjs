@@ -219,14 +219,19 @@ export function detectBaseBranch(config) {
   return "main";
 }
 
+// The ref to compare a branch with: `origin/<baseBranch>`, else the local base
+// branch (a repo without a remote still has one), else null.
+export function baseRef(baseBranch) {
+  // The name comes from the repo (kit.json or origin/HEAD), and hooks run
+  // without asking: a name like "--output=x" must not become a git option.
+  if (!/^[\w./-]+$/.test(baseBranch) || baseBranch.startsWith("-")) return null;
+  return [`origin/${baseBranch}`, baseBranch].find((ref) => run(["git", "rev-parse", "--verify", "--quiet", ref]).ok) ?? null;
+}
+
 // Issue numbers from this branch's `<type>(#N): ...` commit subjects, oldest
 // first, without repeats. More than one means the branch mixes issues.
 export function issuesFromCommits(baseBranch) {
-  // The name comes from the repo (kit.json or origin/HEAD), and hooks run
-  // without asking: a name like "--output=x" must not become a git option.
-  if (!/^[\w./-]+$/.test(baseBranch) || baseBranch.startsWith("-")) return [];
-  // A repo without a remote still has a local base branch.
-  const base = [`origin/${baseBranch}`, baseBranch].find((ref) => run(["git", "rev-parse", "--verify", "--quiet", ref]).ok);
+  const base = baseRef(baseBranch);
   const mergeBase = base && run(["git", "merge-base", "HEAD", base]);
   if (!mergeBase?.ok) return [];
   const subjects = run(["git", "log", "--reverse", "--format=%s", `${mergeBase.output}..HEAD`]).output.split("\n");
