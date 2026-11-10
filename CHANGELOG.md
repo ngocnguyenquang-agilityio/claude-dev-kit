@@ -2,7 +2,7 @@
 
 ## 0.4.3 - 2026-11-10
 
-- Fixed: `issue finish` puts the status docs in the same commit and PR as the work instead of a separate "mark issue done" PR. It checks the branch's PR state first: it pushes to an open PR without `gh pr create`, and stops on a merged one. `ship commit` suggests `issue finish` first when the issue's status docs are untouched.
+- Fixed: `issue finish` puts the status docs in the same commit and PR as the work instead of a separate "mark issue done" PR. It checks the branch's PR state first: it pushes to an open PR without `gh pr create`, and stops on a merged one. `ship commit` (on the commit that completes the issue) and `ship pr` suggest `issue finish` first when the issue's status docs are untouched.
 
 ## 0.4.2 - 2026-11-10
 

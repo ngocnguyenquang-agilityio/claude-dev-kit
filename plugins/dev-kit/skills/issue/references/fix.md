@@ -10,6 +10,6 @@ A bug flow keeps the fix small and proves it with a test. Each step ends when it
 4. **Red.** Use the `tdd` skill: write one test at the seam closest to the bug. Run it. It must fail for the reason you named in step 3.
 5. **Green.** Make the smallest change that removes the cause. Run the new test, then the project's full checks. Done when all pass. Still red: follow the `debug` skill's failed-fix rule (revert, back to step 3, stop after 3 failed fixes).
 6. **Scope.** Note any other problem you found as a follow-up. Do not fix it in this branch.
-7. **Hand over.** Follow `references/finish.md`, passing `N` when there is an issue. It reviews, then gives the user the commit, push and PR commands.
+7. **Hand over.** Follow `references/finish.md`, passing `N` when there is an issue. It reviews, then gives the user the commit and push commands, and the PR command when the branch has no PR yet.
 
 Report the root cause, the fix, the regression test and anything not verified.
