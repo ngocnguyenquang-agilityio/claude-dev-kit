@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3 - 2026-11-10
+
+- Fixed: `issue finish` puts the status docs in the same commit and PR as the work instead of a separate "mark issue done" PR. It checks the branch's PR state first: it pushes to an open PR without `gh pr create`, and stops on a merged one. `ship commit` (on the commit that completes the issue) and `ship pr` suggest `issue finish` first when the issue's status docs are untouched.
+
 ## 0.4.2 - 2026-11-10
 
 - Changed: `grill` asks only questions whose answer changes the work, at most 4 per round, and puts small choices under Assumptions. It looks facts up with an `Explore` sub-agent without blocking the interview, uses `AskUserQuestion` when a question has clear options, and pushes back once on conflicting or risky answers. Its summary has fixed sections (Decisions, Assumptions, Out of scope, Open risks), which `plan` starts from.
