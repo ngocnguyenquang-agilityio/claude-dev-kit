@@ -622,6 +622,114 @@ describe("session-start", () => {
     assert.match(runHook("session-start.mjs", project).out, /wire the filter/);
   });
 
+  describe("handoff note freshness", () => {
+    const git = (project, ...args) => spawnSync("git", args, { cwd: project, encoding: "utf8" }).stdout.trim();
+    const writeNote = (project, state) => {
+      fs.mkdirSync(path.join(project, ".claude", "wip"), { recursive: true });
+      fs.writeFileSync(
+        path.join(project, ".claude", "wip", "feat-search.md"),
+        `# WIP: feat/search\n\n## Next\n\n- wire the filter\n\n## State\n\n${state}\n`,
+      );
+    };
+    const noteAtHead = (project) => writeNote(project, `HEAD ${git(project, "rev-parse", "--short", "HEAD")} · 0 dirty files`);
+    const STALE = /Check it against the repo before acting on it/;
+
+    it("loads a note written at HEAD without a warning", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      noteAtHead(project);
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.match(out, /wire the filter/);
+      assert.doesNotMatch(out, STALE);
+    });
+
+    it("counts the commits made after the note", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      noteAtHead(project);
+      git(project, "commit", "-q", "--allow-empty", "-m", "feat(#3): more");
+      git(project, "commit", "-q", "--allow-empty", "-m", "feat(#3): even more");
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.match(out, /2 commits since/);
+      assert.match(out, STALE);
+      assert.match(out, /wire the filter/);
+    });
+
+    it("warns without a count when the note has no HEAD line", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      writeNote(project, "0 dirty files");
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.match(out, STALE);
+      assert.doesNotMatch(out, /commits? since/);
+      assert.match(out, /wire the filter/);
+    });
+
+    // `main` is a ref git would accept and count from: only a hex sha may reach git.
+    it("does not pass a ref name from the note to git", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      writeNote(project, "HEAD main · 0 dirty files");
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.match(out, STALE);
+      assert.doesNotMatch(out, /commits? since/);
+    });
+
+    it("warns without a count when history was rewritten after the note", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      noteAtHead(project);
+      git(project, "commit", "-q", "--amend", "--allow-empty", "-m", "feat(#3): add search, reworded");
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.match(out, STALE);
+      assert.doesNotMatch(out, /commits? since/);
+    });
+
+    it("skips the note of a branch already merged into the base", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      noteAtHead(project);
+      git(project, "checkout", "-q", "main");
+      git(project, "merge", "-q", "--no-ff", "-m", "Merge feat/search", "feat/search");
+      git(project, "checkout", "-q", "feat/search");
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.doesNotMatch(out, /wire the filter/);
+      assert.match(out, /\.claude\/wip\/feat-search\.md/);
+      assert.match(out, /already merged into main/);
+    });
+
+    it("trusts origin over a local base that has not pulled the merge yet", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      noteAtHead(project);
+      git(project, "checkout", "-q", "main");
+      git(project, "merge", "-q", "--no-ff", "-m", "Merge feat/search", "feat/search");
+      git(project, "update-ref", "refs/remotes/origin/main", "main");
+      git(project, "reset", "-q", "--hard", "main~1");
+      git(project, "checkout", "-q", "feat/search");
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.doesNotMatch(out, /wire the filter/);
+      assert.match(out, /already merged into origin\/main/);
+    });
+
+    it("still loads the note of a new branch with no commits of its own", () => {
+      const project = branchWithCommits("feat/search", [], ["base work"]);
+      noteAtHead(project);
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.match(out, /wire the filter/);
+      assert.doesNotMatch(out, /already merged/);
+    });
+  });
+
   it("names the branch's issue from its commits", () => {
     const project = branchWithCommits("fix/login-crash", ["fix(#7): guard the null user"]);
 

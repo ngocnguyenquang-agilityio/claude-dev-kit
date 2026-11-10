@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 - 2026-11-10
+
+- Changed: SessionStart checks the handoff note against the repo. When HEAD has moved since the note's `HEAD <sha>`, it prints a warning with the commit count above the note; when the sha is missing, not hex, or no longer in the branch's history (rebase, amend, reset), the warning has no count.
+- Changed: SessionStart skips the handoff note of a branch already merged into `origin/<base>` (or the local base with no remote) and prints the note's path so it can be deleted. Only merge commits are detected; after a squash or fast-forward merge the note still loads.
+- Changed: `handoff` notes start with a line telling the next session to compare `git status` and `git log` with State and trust the repo, add a **Tried** section for dropped approaches and gotchas, and record `checks:` in State. Before writing, the skill checks for leftover placeholders, missing paths and secrets, and keeps the note to 40 lines.
+- Fixed: `handoff` lists every git command and file write its steps use in `allowed-tools`, so it runs without permission prompts.
+
 ## 0.4.4 - 2026-11-10
 
 - Changed: `review` still checks the spec when the work has no issue. It passes the reviewer the plan the user approved, or else the user's request, pasted into the prompt; the reviewer turns each plan step or ask into a spec table row. The Spec axis is skipped only when none of the three exists.
