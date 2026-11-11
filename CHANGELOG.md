@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 - 2026-11-11
+
+- Changed: `issue new` searches for duplicate issues first, follows a Markdown template in `.github/ISSUE_TEMPLATE/` when one fits (its sections and existing labels), and adds Out of scope, plus Steps to reproduce and Expected / Actual for bugs. It drafts without a number and names the issue file after the number `gh issue create` returns, instead of guessing it. It passes `--blocked-by` when `gh` supports it.
+- Changed: `issue` lists every file each mode reads in `SKILL.md`, so no mode file points to another, and defines issue file, index and status docs once. It runs `kit-config.mjs` as its first step instead of a `!` injection, which stopped the skill from loading wherever the shell is refused, plugin evals on Windows included.
+- Changed: `issue fix` stops after offering to file an issue, without reading code first, and its regression test follows the issue's Steps to reproduce. `issue finish` reports each acceptance criterion with its evidence, or "not verified".
+- Added: `issue-mode-infer`, `issue-new-bug` and `issue-new-template` evals (baseline 0 of 9 runs, now 9 of 9).
+- Added: `feature` and `bug` issue templates for this repo, with the sections `issue new` writes.
+
 ## 0.5.0 - 2026-11-10
 
 - Changed: SessionStart checks the handoff note against the repo. When HEAD has moved since the note's `HEAD <sha>`, it prints a warning with the commit count above the note; when the sha is missing, not hex, or no longer in the branch's history (rebase, amend, reset), the warning has no count.
