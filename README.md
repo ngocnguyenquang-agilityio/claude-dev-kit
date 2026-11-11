@@ -48,7 +48,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | `release` | Changelog, version bump and release commands. |
 | `ship` | Draft a commit message (`commit`) or PR description (`pr`), print only. |
 
-Skills that need the project's config get it injected when they load (`` !`node .../kit-config.mjs` ``), so Claude never has to remember to run it.
+Skills that need the project's config get it from `kit-config.mjs`. `issue`, `ship` and `review` run it as their first step, so they still load where the shell is refused, plugin evals on Windows included. The others inject it when they load (`` !`node .../kit-config.mjs` ``).
 
 If you also keep skills with the same names in `~/.claude/skills` (`debug`, `plan`, `review` and so on), both copies load: plugin skills are namespaced as `/dev-kit:<name>`, so nothing is overridden, but Claude sees two skills for the same job and may pick either. Delete your personal copies once the plugin is installed.
 
@@ -125,13 +125,13 @@ node --test tests/hooks.test.mjs
 
 324 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
 
-Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template) and `plan`: each checks that the skill fires and that the answer follows it. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
+Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template), `plan` and `review` (a boundary bug the new test misses): each checks that the skill fires and that the answer follows it. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
 
 ```bash
 claude plugin eval plugins/dev-kit --scaffold --allow-tools Edit --ablation none
 ```
 
-`--ablation none` keeps the "skill fired" check in the score; with the default no-plugin comparison it is only an indicator, so a case could pass without the skill ever firing. `--scaffold` is needed for the `debug` and `issue` cases, which build a small project before Claude starts. To see whether a skill makes a difference, run once more without `--ablation none`: the no-plugin baseline should fail some graders other than `skill-fired`. Shell tools cannot be granted to evals on Windows (no sandbox), so the cases do not rely on running commands, and a skill that loads context with a `` !`command` `` injection cannot load in them at all: check the run's evidence, not only `skill-fired`.
+`--ablation none` keeps the "skill fired" check in the score; with the default no-plugin comparison it is only an indicator, so a case could pass without the skill ever firing. `--scaffold` is needed for the `debug`, `issue` and `review` cases, which build a small project before Claude starts. To see whether a skill makes a difference, run once more without `--ablation none`: the no-plugin baseline should fail some graders other than `skill-fired`. Shell tools cannot be granted to evals on Windows (no sandbox), so the cases do not rely on running commands, and a skill that loads context with a `` !`command` `` injection cannot load in them at all: check the run's evidence, not only `skill-fired`.
 
 ## Develop
 

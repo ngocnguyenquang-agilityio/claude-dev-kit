@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1 - 2026-11-11
+
+- Fixed: `review` and `ship` run `kit-config.mjs` as their first step instead of a `!` injection, which stopped them from loading wherever the shell is refused, plugin evals on Windows included. When it cannot run, they say so and name every config value they use and where it came from.
+- Added: `review-boundary-bug` eval.
+
 ## 0.6.0 - 2026-11-11
 
 - Changed: `issue new` searches for duplicate issues first, follows a Markdown template in `.github/ISSUE_TEMPLATE/` when one fits (its sections and existing labels), and adds Out of scope, plus Steps to reproduce and Expected / Actual for bugs. It drafts without a number and names the issue file after the number `gh issue create` returns, instead of guessing it. It passes `--blocked-by` when `gh` supports it.
