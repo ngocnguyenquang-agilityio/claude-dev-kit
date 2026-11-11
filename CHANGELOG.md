@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 - 2026-11-11
+
+- Changed: `plan` writes every plan to `docs/plans/YYYY-MM-DD-<slug>.md` and gives its path, instead of keeping it only in chat, and the plan file is committed with the work. `issue start` lets the issue's linked plan file through its clean-tree check. It shows the whole plan in chat, not a summary, and waits for the user's yes before implementing, then moves on only when a step's check gives its expected result.
+- Changed: `plan` steps name the result that means a check passed, ban placeholders such as "TBD" and finished code, and are checked against every requirement. A plan ends with Out of scope, Decisions and assumptions, and Open questions. The description is in the third person and says to skip a change that fits in one sentence.
+- Added: `plan-skip-trivial` eval. `plan-multi-file` also checks the plan file, Out of scope, expected results and the wait for a yes, so plan evals need `--allow-tools Edit Write`.
+
 ## 0.6.1 - 2026-11-11
 
 - Fixed: `review` and `ship` run `kit-config.mjs` as their first step instead of a `!` injection, which stopped them from loading wherever the shell is refused, plugin evals on Windows included. When it cannot run, they say so and name every config value they use and where it came from.
