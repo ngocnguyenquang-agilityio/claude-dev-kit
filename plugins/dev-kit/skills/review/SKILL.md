@@ -10,8 +10,7 @@ Review everything pending, committed or not. Run it once at the end of a unit of
 
 ## Hand over to the reviewer
 
-- **Config**: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
-  It gives `baseBranch`, the `checks` commands, `issuesDir` and the branch's issue number.
+- **Config**: first run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`. It prints the config as JSON, so you never guess the base branch, issues folder or checks. A step, not a `!` injection: an injected command that cannot run stops the whole skill from loading, and plugin evals on Windows refuse every shell. It gives `baseBranch`, the `checks` commands, `issuesDir` and the branch's issue number. If it cannot run, say so, and name every config value you then use and where you took it from, so the user can correct it.
 - **Issue**: the number comes from the caller (for example `issue finish`), else `branch.issue` in the config. Pass the issue file path `<issuesDir>/<NN>-*.md` too when `issuesDir` is set. If `branch.issues` lists more than one number and no caller gave one, name the conflict in the report. Do not block on asking.
 - **No issue**: pass the plan the user approved instead: its file path, or its steps verbatim when it lives only in chat. With no plan either, pass the user's request verbatim. The reviewer cannot see this conversation, so paste the text rather than refer to it. Only with none of the three does the Spec axis get skipped.
 

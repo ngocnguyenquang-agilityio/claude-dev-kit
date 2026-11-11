@@ -12,6 +12,6 @@ The first word is the mode: `commit` or `pr`. Everything after it is the mode's 
 
 Print only; never run `git add`, `git commit`, `git push` or `gh pr create`.
 
-Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
+First run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`. It prints the config as JSON, so you never guess the base branch, issues folder or checks. A step, not a `!` injection: an injected command that cannot run stops the whole skill from loading, and plugin evals on Windows refuse every shell. If it cannot run, say so, and name every config value you then use and where you took it from, so the user can correct it.
 
-Read `references/<mode>.md` in this skill's folder and follow it. The issue number comes from `${CLAUDE_PLUGIN_ROOT}/skills/issue/references/issue-number.md`.
+Then read `references/<mode>.md` in this skill's folder and follow it. The issue number comes from `${CLAUDE_PLUGIN_ROOT}/skills/issue/references/issue-number.md`.
