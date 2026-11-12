@@ -3,7 +3,7 @@
 Draft a commit message for the pending work.
 
 1. Run `git fetch origin <baseBranch>`, then find the merge-base of the current branch with `origin/<baseBranch>`. Read `git diff <merge-base>` and `git status --porcelain` (read untracked files too).
-2. Run the `review` skill on this work, unless it already ran on this same diff (for example through `/dev-kit:issue finish`). Fix Block and Should fix items first; the skill re-runs the checks.
+2. Run the `review` skill on this work, unless it already ran on this same diff (for example through `/dev-kit:issue finish`). Fix Block and Should fix items first, except Scope items, which wait for the user's decision; the skill re-runs the checks.
 3. **Status docs.** Only with `N` and `issuesDir` set, when this commit completes the issue (it does every task still unticked in the issue file, or the user says so), and not when this runs from `/dev-kit:issue finish`. If the diff leaves the issue's status docs untouched, say so and suggest `/dev-kit:issue finish` first, so they ride in this commit and its PR instead of a second PR after the merge.
 4. Print, in code blocks:
    - The commit message.

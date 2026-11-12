@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0 - 2026-11-12
+
+- Changed: the `reviewer` agent re-reads each Block item and names what triggers it before reporting, and drops what it cannot show. A "Do not flag" list keeps out problems in code the diff does not touch (now listed as Follow-ups), code that only looks wrong, what a linter catches and nitpicks. It reads `CLAUDE.md` and `AGENTS.md` in every directory on the path of a changed file and quotes the rule it cites. Standards covers design: needless abstraction and code that could be deleted. Levels follow impact, with the axis as the default.
+- Changed: `review` never reverts Scope items and reports them as "needs your decision", and `issue finish` and `ship commit` say the same. After a Block fix of more than a few lines it runs the reviewer once more. The description is in the third person and covers a diff pasted into the chat. A plan is passed by its file path.
+- Added: `review-clean-diff`, `review-pre-existing-bug` and `review-scope-change` evals. They also pass on the old skill, so they are regression guards.
+- Fixed: the `review-boundary-bug` grader counts a Block finding the review also fixed. Its judge failed such answers in 3 of 9 runs on the old skill.
+
 ## 0.7.0 - 2026-11-11
 
 - Changed: `plan` writes every plan to `docs/plans/YYYY-MM-DD-<slug>.md` and gives its path, instead of keeping it only in chat, and the plan file is committed with the work. `issue start` lets the issue's linked plan file through its clean-tree check. It shows the whole plan in chat, not a summary, and waits for the user's yes before implementing, then moves on only when a step's check gives its expected result.

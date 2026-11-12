@@ -41,7 +41,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | `plan` | Break multi-file work into verifiable steps, save the plan to `docs/plans/` and wait for your yes. |
 | `debug` | Root cause first, with a feedback loop. |
 | `tdd` | Red-green loop at an agreed seam. |
-| `review` | Pre-commit review: the `reviewer` agent checks six axes, then Block and Should fix items are fixed and the checks re-run. |
+| `review` | Pre-commit review: the `reviewer` agent checks six axes and verifies each Block item, then Block and Should fix items are fixed, except Scope items, which wait for your decision, and the checks re-run. |
 | `handoff` | Across sessions: write a per-branch pause note that the next session on the branch loads. |
 | `issue` | GitHub issue to branch to PR, one issue = one branch = one PR. Modes: `new`, `start`, `finish`, and `fix` (bug flow: root cause, failing test, smallest fix, PR). |
 | `pr-followup` | After the PR is open. `ci`: read the failed job, reproduce locally, fix. `comments`: triage and address review comments. |
@@ -125,7 +125,7 @@ node --test tests/hooks.test.mjs
 
 324 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
 
-Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template), `plan` (a multi-file feature, a rename that needs no plan) and `review` (a boundary bug the new test misses): each checks that the skill fires and that the answer follows it, except `plan-skip-trivial`, which checks that a one-sentence change gets no plan. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
+Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template), `plan` (a multi-file feature, a rename that needs no plan) and `review` (a boundary bug the new test misses, a correct change that looks like a bug, a bug outside the diff, a change the request did not ask for): each checks that the skill fires and that the answer follows it, except `plan-skip-trivial`, which checks that a one-sentence change gets no plan. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
 
 ```bash
 claude plugin eval plugins/dev-kit --scaffold --allow-tools Edit Write --ablation none
