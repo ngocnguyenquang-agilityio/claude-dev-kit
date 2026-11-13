@@ -1,8 +1,27 @@
 # Changelog
 
-## 0.6.2 - 2026-11-11
+## 0.9.1 - 2026-11-13
 
 - Fixed: `handoff`, `pr-followup` and `release` run `kit-config.mjs` as their first step instead of a `!` injection, like `issue`, `ship` and `review`, so no skill fails to load where the shell is refused. When it cannot run, they say so and name every config value they use and where it came from.
+
+## 0.9.0 - 2026-11-13
+
+- Added: the read-only `impact-mapper` agent (`Read`, `Grep`, `Glob`, `haiku`). From a plain-language description of a change it lists the files affected, each marked Confirmed, Likely or Possible with `path:line`, the existing code worth reusing, the terms it searched and its blind spots. It follows re-exports and aliases until no new name appears and looks for dynamic use such as string-keyed registries. It searches only inside the folder it is given.
+- Changed: `plan` step 2 spawns `impact-mapper` instead of reading the code itself, and reads the lines the report cites before deciding what changes. When the agent fails, finds nothing or the project has no code yet, `plan` carries on, marks the paths it assumes and lists them under Open questions. A step that renames or removes a symbol also greps for the old name and expects 0 hits.
+- Added: `plan-impact-mapper` eval (a 122-file shop app; the change reaches 11 files through aliases, a registry and a script) and a `no-agent` check in `plan-skip-trivial`. The old `plan` already named all 11 files in 3 of 3 runs, so the eval does not show a gain in finding callers. With the agent the main session took about a quarter fewer turns at equal discovery: mean 14.2 turns over 6 runs of the final text, against 18.8 over 6 runs of the old `plan`. Mean cost was $0.33 against $0.29, pulled up by one $0.64 run; the medians are about equal. Six runs per side show a direction, not a measured effect. The criteria were loosened to check discovery only after a stricter version failed 6 of 9 runs on plan design; see the issue file for the numbers.
+
+## 0.8.0 - 2026-11-12
+
+- Changed: the `reviewer` agent re-reads each Block item and names what triggers it before reporting, and drops what it cannot show. A "Do not flag" list keeps out problems in code the diff does not touch (now listed as Follow-ups), code that only looks wrong, what a linter catches and nitpicks. It reads `CLAUDE.md` and `AGENTS.md` in every directory on the path of a changed file and quotes the rule it cites. Standards covers design: needless abstraction and code that could be deleted. Levels follow impact, with the axis as the default.
+- Changed: `review` never reverts Scope items and reports them as "needs your decision", and `issue finish` and `ship commit` say the same. After a Block fix of more than a few lines it runs the reviewer once more. The description is in the third person and covers a diff pasted into the chat. A plan is passed by its file path.
+- Added: `review-clean-diff`, `review-pre-existing-bug` and `review-scope-change` evals. They also pass on the old skill, so they are regression guards.
+- Fixed: the `review-boundary-bug` grader counts a Block finding the review also fixed. Its judge failed such answers in 3 of 9 runs on the old skill.
+
+## 0.7.0 - 2026-11-11
+
+- Changed: `plan` writes every plan to `docs/plans/YYYY-MM-DD-<slug>.md` and gives its path, instead of keeping it only in chat, and the plan file is committed with the work. `issue start` lets the issue's linked plan file through its clean-tree check. It shows the whole plan in chat, not a summary, and waits for the user's yes before implementing, then moves on only when a step's check gives its expected result.
+- Changed: `plan` steps name the result that means a check passed, ban placeholders such as "TBD" and finished code, and are checked against every requirement. A plan ends with Out of scope, Decisions and assumptions, and Open questions. The description is in the third person and says to skip a change that fits in one sentence.
+- Added: `plan-skip-trivial` eval. `plan-multi-file` also checks the plan file, Out of scope, expected results and the wait for a yes, so plan evals need `--allow-tools Edit Write`.
 
 ## 0.6.1 - 2026-11-11
 

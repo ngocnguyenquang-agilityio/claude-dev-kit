@@ -2,7 +2,7 @@
 
 Start issue `#$ARGUMENTS`. Each step ends when its check holds. `baseBranch` and `issuesDir` come from the config.
 
-1. **Clean tree.** `git status --porcelain` lists nothing except this issue's issue file and the index, left uncommitted by `/dev-kit:issue new`. Those carry over to the new branch and get committed with the issue. If anything else shows up, stop and ask the user what to do with it.
+1. **Clean tree.** `git status --porcelain` lists nothing except this issue's issue file and the index, left uncommitted by `/dev-kit:issue new`, and the plan file under `docs/plans/` that this issue file links to. Those carry over to the new branch and get committed with the issue. If anything else shows up, stop and ask the user what to do with it.
 2. **Up-to-date base.** Run `git fetch origin <baseBranch>`. Then `git checkout <baseBranch>` and `git merge --ff-only origin/<baseBranch>`. Done when `git rev-parse <baseBranch>` equals `git rev-parse origin/<baseBranch>`. If the fast-forward fails, stop and tell the user: the local base has diverged.
 3. **Read the issue.**
    - Run `gh issue view <N>`.
