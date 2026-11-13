@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2 - 2026-11-11
+
+- Fixed: `handoff`, `pr-followup` and `release` run `kit-config.mjs` as their first step instead of a `!` injection, like `issue`, `ship` and `review`, so no skill fails to load where the shell is refused. When it cannot run, they say so and name every config value they use and where it came from.
+
 ## 0.6.1 - 2026-11-11
 
 - Fixed: `review` and `ship` run `kit-config.mjs` as their first step instead of a `!` injection, which stopped them from loading wherever the shell is refused, plugin evals on Windows included. When it cannot run, they say so and name every config value they use and where it came from.

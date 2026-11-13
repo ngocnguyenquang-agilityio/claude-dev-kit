@@ -48,7 +48,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | `release` | Changelog, version bump and release commands. |
 | `ship` | Draft a commit message (`commit`) or PR description (`pr`), print only. |
 
-Skills that need the project's config get it from `kit-config.mjs`. `issue`, `ship` and `review` run it as their first step, so they still load where the shell is refused, plugin evals on Windows included. The others inject it when they load (`` !`node .../kit-config.mjs` ``).
+Skills that need the project's config get it from `kit-config.mjs`: `issue`, `ship`, `review`, `handoff`, `pr-followup` and `release` run it as their first step instead of a `!` injection, so they still load where the shell is refused, plugin evals on Windows included.
 
 If you also keep skills with the same names in `~/.claude/skills` (`debug`, `plan`, `review` and so on), both copies load: plugin skills are namespaced as `/dev-kit:<name>`, so nothing is overridden, but Claude sees two skills for the same job and may pick either. Delete your personal copies once the plugin is installed.
 

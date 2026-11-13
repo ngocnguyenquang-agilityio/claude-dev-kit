@@ -8,7 +8,7 @@ allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"), Bash(git
 
 Focus for the next session: $ARGUMENTS
 
-Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
+First run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`. It prints the config as JSON, so you never guess the base branch, issues folder or checks. A step, not a `!` injection: an injected command that cannot run stops the whole skill from loading, and plugin evals on Windows refuse every shell. If it cannot run, say so, and name every config value you then use and where you took it from, so the user can correct it.
 
 Compact this conversation into one note per branch. The plugin's SessionStart hook loads it into the next session on the same branch. It warns when HEAD has moved since the `HEAD <sha>` in State, and skips the note once the branch is merged with a merge commit (not after a squash or fast-forward merge).
 

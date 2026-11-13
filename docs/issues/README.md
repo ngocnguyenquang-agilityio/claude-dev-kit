@@ -13,5 +13,6 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 28 | [Handoff skill: stale-note check, expiry and a stricter note format](28-handoff-skill-best-practices.md) | closed | none |
 | 30 | [Issue skill: one-level references, evals, better drafts and repo issue templates](30-issue-skill-best-practices.md) | closed | none |
 | 32 | [Ship and review skills: load config as a step so evals can load them](32-ship-review-config-step.md) | closed | #30 |
+| 34 | [Handoff, pr-followup and release: load config as a step so evals can load them](34-handoff-pr-followup-release-config-step.md) | open | #32 |
 
-Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30 and 32 are independent of them and of each other.
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30 and 32 are independent of them and of each other. 34 builds on 32: it changes the same README sentence, changelog and version.
