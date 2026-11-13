@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.2 - 2026-11-13
+
+- Changed: the `plan-impact-mapper` grader passes a plan only when each of the 11 files has a reason tied to `formatPrice`, and fails it when it lists the decoy `src/features/promo/labels.js` or another `src/features/` folder as affected. A names-only answer failed it in 3 of 3 runs (checked in a scratch case, not kept); the real case still passed 6 of 6.
+- Added: `plan-agent-unavailable` eval. It blocks `Agent` with `disallowed_tools`, and `plan` still names all 11 files without spawning `impact-mapper`: 3 of 3 runs. It covers an unavailable agent, not one that returns an error. Removing `Agent` from `allowed_tools` does not block it.
+
 ## 0.9.1 - 2026-11-13
 
 - Fixed: `handoff`, `pr-followup` and `release` run `kit-config.mjs` as their first step instead of a `!` injection, like `issue`, `ship` and `review`, so no skill fails to load where the shell is refused. When it cannot run, they say so and name every config value they use and where it came from.

@@ -17,5 +17,6 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 35 | [Plan skill: approval gate, out of scope, saved plans and stricter checks](35-plan-skill-best-practices.md) | closed | none |
 | 37 | [Review skill: verified findings, scoped rules, scope decisions and behavior evals](37-review-skill-best-practices.md) | closed | none |
 | 39 | [Add a read-only impact-mapper agent that plan calls at step 2](39-impact-mapper-agent.md) | closed | none |
+| 43 | [Impact-mapper follow-ups: stricter eval criteria, fallback check and a real-project trial](43-impact-mapper-followups.md) | closed | none |
 
-Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37 and 39 are independent of them and of each other.
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39 and 43 are independent of them and of each other.
