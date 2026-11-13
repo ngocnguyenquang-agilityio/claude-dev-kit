@@ -8,7 +8,7 @@ allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 
 Prepare a release: `$ARGUMENTS`. This skill drafts and prints; it never tags, pushes or publishes.
 
-Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
+First run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`. It prints the config as JSON, so you never guess the base branch, issues folder or checks. A step, not a `!` injection: an injected command that cannot run stops the whole skill from loading, and plugin evals on Windows refuse every shell. If it cannot run, say so, and name every config value you then use and where you took it from, so the user can correct it.
 
 1. **Last release.** `git describe --tags --abbrev=0` (no tag means the first release: use the first commit). Take `baseBranch` and `checks` from the config. Stop if the working tree is dirty or the branch is not `<baseBranch>` up to date with `origin/<baseBranch>`; tell the user.
 2. **Changes.** `git log <tag>..HEAD --no-merges --format="%h %s"`, and `gh pr list --state merged --base <baseBranch> --search "merged:>=<tag date>" --json number,title,labels`. Group by conventional type: feat, fix, refactor, docs, chore, test. Flag commits that do not follow the convention.

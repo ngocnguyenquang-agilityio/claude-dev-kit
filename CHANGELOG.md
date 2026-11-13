@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1 - 2026-11-13
+
+- Fixed: `handoff`, `pr-followup` and `release` run `kit-config.mjs` as their first step instead of a `!` injection, like `issue`, `ship` and `review`, so no skill fails to load where the shell is refused. When it cannot run, they say so and name every config value they use and where it came from.
+
 ## 0.9.0 - 2026-11-13
 
 - Added: the read-only `impact-mapper` agent (`Read`, `Grep`, `Glob`, `haiku`). From a plain-language description of a change it lists the files affected, each marked Confirmed, Likely or Possible with `path:line`, the existing code worth reusing, the terms it searched and its blind spots. It follows re-exports and aliases until no new name appears and looks for dynamic use such as string-keyed registries. It searches only inside the folder it is given.

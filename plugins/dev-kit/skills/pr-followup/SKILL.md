@@ -10,6 +10,6 @@ Mode and arguments: $ARGUMENTS
 
 The first word is the mode: `ci` or `comments`. Everything after it is the mode's arguments, called `$ARGUMENTS` in the mode file. If the first word is not a mode, infer it from the request (a red check is `ci`, review comments are `comments`) and say which one you chose. When nothing tells you, ask.
 
-Config: !`node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`
+First run `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`. It prints the config as JSON, so you never guess the base branch, issues folder or checks. A step, not a `!` injection: an injected command that cannot run stops the whole skill from loading, and plugin evals on Windows refuse every shell. If it cannot run, say so, and name every config value you then use and where you took it from, so the user can correct it.
 
-Read `references/<mode>.md` in this skill's folder and follow it. `checks` comes from the config above.
+Then read `references/<mode>.md` in this skill's folder and follow it. `checks` comes from that config.
