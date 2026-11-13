@@ -38,7 +38,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | Skill | Use it for |
 |---|---|
 | `grill` | Settle a vague request with a decision-tree interview. |
-| `plan` | Break multi-file work into verifiable steps, save the plan to `docs/plans/` and wait for your yes. |
+| `plan` | Break multi-file work into verifiable steps, using the `impact-mapper` agent to find what the change touches, save the plan to `docs/plans/` and wait for your yes. |
 | `debug` | Root cause first, with a feedback loop. |
 | `tdd` | Red-green loop at an agreed seam. |
 | `review` | Pre-commit review: the `reviewer` agent checks six axes and verifies each Block item, then Block and Should fix items are fixed, except Scope items, which wait for your decision, and the checks re-run. |
@@ -52,7 +52,7 @@ Skills that need the project's config get it from `kit-config.mjs`. `issue`, `sh
 
 If you also keep skills with the same names in `~/.claude/skills` (`debug`, `plan`, `review` and so on), both copies load: plugin skills are namespaced as `/dev-kit:<name>`, so nothing is overridden, but Claude sees two skills for the same job and may pick either. Delete your personal copies once the plugin is installed.
 
-**Agents:** `reviewer` (read-only pre-commit review), `ui-verifier` (mobile/desktop, light/dark check in the built-in browser).
+**Agents:** `reviewer` (read-only pre-commit review), `impact-mapper` (read-only search for the files a planned change affects and the code to reuse), `ui-verifier` (mobile/desktop, light/dark check in the built-in browser).
 
 Nothing here commits, pushes or opens a PR on its own. `ship` only prints; `issue finish` and `pr-followup` print the commands, then run one only after you say yes to it.
 
@@ -125,7 +125,7 @@ node --test tests/hooks.test.mjs
 
 324 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
 
-Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template), `plan` (a multi-file feature, a rename that needs no plan) and `review` (a boundary bug the new test misses, a correct change that looks like a bug, a bug outside the diff, a change the request did not ask for): each checks that the skill fires and that the answer follows it, except `plan-skip-trivial`, which checks that a one-sentence change gets no plan. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
+Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template), `plan` (a multi-file feature, a rename that needs no plan and must not call `impact-mapper`, a change whose callers sit behind aliases in a 122-file app) and `review` (a boundary bug the new test misses, a correct change that looks like a bug, a bug outside the diff, a change the request did not ask for): each checks that the skill fires and that the answer follows it, except `plan-skip-trivial`, which checks that a one-sentence change gets no plan. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
 
 ```bash
 claude plugin eval plugins/dev-kit --scaffold --allow-tools Edit Write --ablation none

@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: plan-impact-mapper
+context:
+  scaffold_script: fixture.sh

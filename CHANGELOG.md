@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0 - 2026-11-13
+
+- Added: the read-only `impact-mapper` agent (`Read`, `Grep`, `Glob`, `haiku`). From a plain-language description of a change it lists the files affected, each marked Confirmed, Likely or Possible with `path:line`, the existing code worth reusing, the terms it searched and its blind spots. It follows re-exports and aliases until no new name appears and looks for dynamic use such as string-keyed registries. It searches only inside the folder it is given.
+- Changed: `plan` step 2 spawns `impact-mapper` instead of reading the code itself, and reads the lines the report cites before deciding what changes. When the agent fails, finds nothing or the project has no code yet, `plan` carries on, marks the paths it assumes and lists them under Open questions. A step that renames or removes a symbol also greps for the old name and expects 0 hits.
+- Added: `plan-impact-mapper` eval (a 122-file shop app; the change reaches 11 files through aliases, a registry and a script) and a `no-agent` check in `plan-skip-trivial`. The old `plan` already named all 11 files in 3 of 3 runs, so the eval does not show a gain in finding callers. With the agent the main session took about a quarter fewer turns at equal discovery: mean 14.2 turns over 6 runs of the final text, against 18.8 over 6 runs of the old `plan`. Mean cost was $0.33 against $0.29, pulled up by one $0.64 run; the medians are about equal. Six runs per side show a direction, not a measured effect. The criteria were loosened to check discovery only after a stricter version failed 6 of 9 runs on plan design; see the issue file for the numbers.
+
 ## 0.8.0 - 2026-11-12
 
 - Changed: the `reviewer` agent re-reads each Block item and names what triggers it before reporting, and drops what it cannot show. A "Do not flag" list keeps out problems in code the diff does not touch (now listed as Follow-ups), code that only looks wrong, what a linter catches and nitpicks. It reads `CLAUDE.md` and `AGENTS.md` in every directory on the path of a changed file and quotes the rule it cites. Standards covers design: needless abstraction and code that could be deleted. Levels follow impact, with the axis as the default.
