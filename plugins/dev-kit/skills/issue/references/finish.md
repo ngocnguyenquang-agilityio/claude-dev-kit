@@ -23,6 +23,6 @@ Bring the current `<type>/<slug>` branch to a ready-to-commit state. You commit,
    - The commit message and the PR title and body, drafted by following `ship`'s `commit.md` and `pr.md` with `N` (the `ship` skill itself is manual-only). Do not rewrite their format here. The status docs go in the same commit as the work. Only when the work is already committed, draft a `<type>(#N): mark issue done` commit for them on this same branch, so they land in the same PR.
    - The exact commands, in order, each in its own `bash` block: `git add` with the paths, status docs included, `git commit` with the drafted message, `git push -u origin <branch>`, and, only when the branch has no PR yet, `gh pr create --base <baseBranch> --title "<title>" --body "<body>"` using the drafted title and body.
 
-Then stop. When the user says yes to a command, run that one command, and ask again before the next. Once the PR is open, CI runs on it. Read `gh pr checks` and report failures; use `/dev-kit:pr-followup ci` for a red check and `/dev-kit:pr-followup comments` for review comments.
+Then stop. When the user says yes to a command, run that one command, and ask again before the next. Once the PR is open, CI runs on it. Read `gh pr checks` and report failures.
 
 With an issue, after the user merges the PR, check that `Closes #N` closed the issue (`gh issue view N`; it only closes automatically when the PR targets the repo's default branch). If it's still open, offer `gh issue close N`.
