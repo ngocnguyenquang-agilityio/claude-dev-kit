@@ -29,7 +29,7 @@ Form one hypothesis at a time, state what would prove it wrong, and test it with
 
 ## 3. Fix
 
-1. **Regression test first.** If the loop is a test, it is the regression test. Otherwise turn the loop into a failing test before fixing, with the `tdd` skill, when a test can express the bug.
+1. **Regression test first.** If the loop is a test, it is the regression test. Otherwise turn the loop into a failing test before fixing, when a test can express the bug.
 2. **Smallest change** that removes the cause, at the source rather than where the error shows.
 3. **Re-run the loop.** Green: run the broader tests. Still red: revert this attempt and go back to step 2 with what you learned. Do not stack fixes.
 4. **After 3 failed fixes, stop.** The design is likely wrong, not the hypothesis. Tell the user what you tried and ask before a fourth attempt.

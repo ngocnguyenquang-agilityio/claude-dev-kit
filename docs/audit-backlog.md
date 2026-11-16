@@ -6,9 +6,7 @@ Done since the audit: A8 (handoff notes never expired) and A10 (`handoff` `allow
 
 ## Medium
 
-- A6. Personal `~/.claude/skills` (debug, grill, handoff, plan, review, tdd) duplicate the plugin skills.
-- A7. `~/.claude/rules` and the SessionStart rules are injected twice and disagree (review: fix Should fix vs show judgement calls).
-- A9. `release` assumes it runs on the base branch and bumps `package.json`; this repo releases through a branch and PR and versions in `plugin.json`.
+- A7. Move the rules in `~/.claude/rules` into the kit so one source remains (they are injected twice today and disagree: review fix Should fix vs show judgement calls).
 - A11. Stop checks are JS/TS only: skipped with no `package.json` (this repo too), and `relatedTests` misses `node --test`.
 - A12. Stop checks ignore config edits (`package.json`, eslint config).
 - A13. A Stop hook timeout (300 s) is silent: no notification, no feedback.
@@ -23,7 +21,6 @@ Done since the audit: A8 (handoff notes never expired) and A10 (`handoff` `allow
 
 ## Evals
 
-- A22. No eval for `tdd` yet.
 - A23. The `grill` 1.0 score has no baseline.
 
 ## Gotchas

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0 - 2026-11-16
+
+- Added: `docs/vision.md` with the purpose, the three pillars, the scope, the gate for new components, the review cadence and a roadmap.
+- Changed: the working rules carry two lines on the scope of the kit, so a change to the plugin itself must serve code quality, session memory or safety and come with an eval.
+- Changed: `issue fix` and `debug` carry the red-step guidance themselves: write one test at the seam closest to the bug, test behavior through the public interface, and ask before adding a test setup the project lacks.
+
 ## 0.9.2 - 2026-11-13
 
 - Changed: the `plan-impact-mapper` grader passes a plan only when each of the 11 files has a reason tied to `formatPrice`, and fails it when it lists the decoy `src/features/promo/labels.js` or another `src/features/` folder as affected. A names-only answer failed it in 3 of 3 runs (checked in a scratch case, not kept); the real case still passed 6 of 6.

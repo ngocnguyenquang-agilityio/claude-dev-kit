@@ -1,6 +1,6 @@
 # claude-dev-kit
 
-A Claude Code plugin marketplace with one plugin, `dev-kit`: a personal working kit (rules, skills, agents and hooks). It adapts to each project by itself.
+A Claude Code plugin marketplace with one plugin, `dev-kit`: a personal working kit (rules, skills, agents and hooks). It adapts to each project by itself. What it is for, and what it is not for, is in [docs/vision.md](docs/vision.md).
 
 ## Install
 
@@ -40,21 +40,18 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | `grill` | Settle a vague request with a decision-tree interview. |
 | `plan` | Break multi-file work into verifiable steps, using the `impact-mapper` agent to find what the change touches, save the plan to `docs/plans/` and wait for your yes. |
 | `debug` | Root cause first, with a feedback loop. |
-| `tdd` | Red-green loop at an agreed seam. |
 | `review` | Pre-commit review: the `reviewer` agent checks six axes and verifies each Block item, then Block and Should fix items are fixed, except Scope items, which wait for your decision, and the checks re-run. |
 | `handoff` | Across sessions: write a per-branch pause note that the next session on the branch loads. |
 | `issue` | GitHub issue to branch to PR, one issue = one branch = one PR. Modes: `new`, `start`, `finish`, and `fix` (bug flow: root cause, failing test, smallest fix, PR). |
-| `pr-followup` | After the PR is open. `ci`: read the failed job, reproduce locally, fix. `comments`: triage and address review comments. |
-| `release` | Changelog, version bump and release commands. |
 | `ship` | Draft a commit message (`commit`) or PR description (`pr`), print only. |
 
-Skills that need the project's config get it from `kit-config.mjs`: `issue`, `ship`, `review`, `handoff`, `pr-followup` and `release` run it as their first step instead of a `!` injection, so they still load where the shell is refused, plugin evals on Windows included.
+Skills that need the project's config get it from `kit-config.mjs`: `issue`, `ship`, `review` and `handoff` run it as their first step instead of a `!` injection, so they still load where the shell is refused, plugin evals on Windows included.
 
 If you also keep skills with the same names in `~/.claude/skills` (`debug`, `plan`, `review` and so on), both copies load: plugin skills are namespaced as `/dev-kit:<name>`, so nothing is overridden, but Claude sees two skills for the same job and may pick either. Delete your personal copies once the plugin is installed.
 
-**Agents:** `reviewer` (read-only pre-commit review), `impact-mapper` (read-only search for the files a planned change affects and the code to reuse), `ui-verifier` (mobile/desktop, light/dark check in the built-in browser).
+**Agents:** `reviewer` (read-only pre-commit review), `impact-mapper` (read-only search for the files a planned change affects and the code to reuse).
 
-Nothing here commits, pushes or opens a PR on its own. `ship` only prints; `issue finish` and `pr-followup` print the commands, then run one only after you say yes to it.
+Nothing here commits, pushes or opens a PR on its own. `ship` only prints; `issue finish` prints the commands, then runs one only after you say yes to it.
 
 ## Configuration
 

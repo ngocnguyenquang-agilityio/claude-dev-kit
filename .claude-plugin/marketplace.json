@@ -6,7 +6,7 @@
     {
       "name": "dev-kit",
       "source": "./plugins/dev-kit",
-      "description": "Portable working kit: guard hooks, plan/debug/tdd/review skills, GitHub issue to PR workflow.",
+      "description": "Portable working kit: guard hooks, plan/debug/review skills, GitHub issue to PR workflow.",
       "category": "development"
     }
   ]
