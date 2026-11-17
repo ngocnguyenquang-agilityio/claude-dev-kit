@@ -6,13 +6,13 @@ Work started straight on `main` in a session, with no issue and no branch, becau
 
 ## Tasks
 
-- [ ] In `plugins/dev-kit/hooks/safety-guard.mjs`, for `Edit`, `Write` and `MultiEdit`, read the branch and `baseBranch` through `lib.mjs` (`detectBaseBranch`, the same call `kit-config.mjs` uses) and ask when they match
-- [ ] Skip the check for paths that are not project work: files outside the project directory (this covers the scratchpad and temp folders), `.claude/`, `docs/plans/` and `issuesDir`, which `issue new` and `issue start` write on the base branch, and a repository whose base branch has no commit yet
-- [ ] Add `guard.baseBranch` to the defaults in `plugins/dev-kit/hooks/lib.mjs` (`"ask"` by default, `"deny"` blocks, `"off"` turns it off), next to `guard.git`
-- [ ] Say in the ask message what to do: run `/dev-kit:issue new`, then `/dev-kit:issue start <N>`
-- [ ] Add tests to `tests/hooks.test.mjs`: asks on the base branch, stays silent on a feature branch, honors `deny` and `off`, skips an outside path, and does nothing outside a git repository
-- [ ] Add one line to `plugins/dev-kit/rules/working-rules.md` Workflow: start every change from an issue and a branch, never edit on the base branch
-- [ ] Document `guard.baseBranch` in `README.md` next to `guard.git`, and add a CHANGELOG entry
+- [x] In `plugins/dev-kit/hooks/safety-guard.mjs`, for `Edit`, `Write` and `MultiEdit`, read the branch and `baseBranch` through `lib.mjs` (`detectBaseBranch`, the same call `kit-config.mjs` uses) and ask when they match
+- [x] Skip the check for paths that are not project work: files outside the project directory (this covers the scratchpad and temp folders), `.claude/`, `docs/plans/` and `issuesDir`, which `issue new` and `issue start` write on the base branch, and a repository whose base branch has no commit yet
+- [x] Add `guard.baseBranch` to the defaults in `plugins/dev-kit/hooks/lib.mjs` (`"ask"` by default, `"deny"` blocks, `"off"` turns it off), next to `guard.git`
+- [x] Say in the ask message what to do: run `/dev-kit:issue new`, then `/dev-kit:issue start <N>`
+- [x] Add tests to `tests/hooks.test.mjs`: asks on the base branch, stays silent on a feature branch, honors `deny` and `off`, skips an outside path, and does nothing outside a git repository
+- [x] Add one line to `plugins/dev-kit/rules/working-rules.md` Workflow: start every change from an issue and a branch, never edit on the base branch
+- [x] Document `guard.baseBranch` in `README.md` next to `guard.git`, and add a CHANGELOG entry
 
 ## Acceptance criteria
 
