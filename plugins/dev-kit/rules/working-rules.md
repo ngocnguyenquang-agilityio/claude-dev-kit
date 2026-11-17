@@ -4,6 +4,7 @@
 - Reply in the language of the user's latest prompt. Write everything that goes into a file or git in English: code, comments, commit messages, docs.
 
 **Workflow**
+- Start every change from an issue and a branch, never on the base branch: run `/dev-kit:issue new`, then `/dev-kit:issue start`.
 - Reuse existing code first; build something new only when nothing fits.
 - At the end of a unit of work that changed any file, docs and config included, run the `review` skill before reporting back and before handing over commit commands.
 

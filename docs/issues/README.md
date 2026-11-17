@@ -20,5 +20,6 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 43 | [Impact-mapper follow-ups: stricter eval criteria, fallback check and a real-project trial](43-impact-mapper-followups.md) | closed | none |
 | 45 | [Focus the kit on its purpose](45-focus-kit-scope.md) | closed | none |
 | 47 | [Handoff skill: behavior evals and a Next-items rule](47-handoff-evals.md) | open | none |
+| 49 | [Safety guard: ask before editing files on the base branch](49-base-branch-edit-guard.md) | open | none |
 
-Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45 and 47 are independent of them and of each other.
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47 and 49 are independent of them and of each other.
