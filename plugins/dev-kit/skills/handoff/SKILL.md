@@ -60,4 +60,5 @@ HEAD <sha> · <count> dirty files · checks: <pass | fail <names> | not run> · 
 
 - Do not duplicate what already lives in commits, diffs or the issue file; point to it.
 - If the user passed an argument, make it the first item under **Next**.
+- **Next** holds actions only. An item that only says where things stand belongs under **Done**; do not open **Next** with a recap of the task or the issue.
 - Take `checks:` from what ran in this conversation. Never assume a pass: a check that did not run is `not run`.
