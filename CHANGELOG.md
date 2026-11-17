@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added: `handoff` evals `handoff-basic`, `handoff-focus-arg` and `handoff-secret`. They check the note a session writes: all six sections and the State line, `checks: not run` when nothing ran, the passed argument as the first Next item, and a key that never reaches the note. With the `sonnet` judge: `handoff-focus-arg` and `handoff-secret` passed 3 of 3 runs each, `handoff-basic` 2 of 3 on the final run and 1 of 3 on an earlier one. The failures were real: `handoff` sometimes opens Next with a recap of Done, against its own rule that each Next item is one action. `handoff` now says Next holds actions only and a status line belongs under Done. After that change `handoff-basic` passed 2 of 3 runs and the recap did not come back in 3 runs; the failed run left a `<type>(#12)` placeholder in Next, which the skill already forbids. Three runs per case show a direction, not a measured rate.
+- Changed: the `handoff` cases grade the note as printed in the reply, and have no `skill-fired` grader. Writing under `.claude/` is refused in an eval and a slash command in the prompt does not count as a `Skill` call, so the note text is the evidence.
+
 ## 0.10.0 - 2026-11-16
 
 - Added: `docs/vision.md` with the purpose, the three pillars, the scope, the gate for new components, the review cadence and a roadmap.
