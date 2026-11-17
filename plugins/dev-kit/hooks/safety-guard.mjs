@@ -4,6 +4,9 @@
 //    commands make Claude Code ask the user first, every time. Set guard.git to
 //    "deny" in .claude/kit.json to block them outright, or "off" to turn this
 //    check off.
+//  - Editing a project file while on the base branch makes Claude Code ask the
+//    user first, so work starts from an issue and a branch. Set
+//    guard.baseBranch in .claude/kit.json to "deny" or "off" like guard.git.
 //  - The reviewer agent may run only commands that inspect: anything else is
 //    blocked, so it stays read-only whatever its prompt says.
 // Exit code 2 blocks the call and sends stderr to Claude. A JSON "ask" decision
@@ -18,7 +21,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { binaryName, commandIndex, commandSegments, loadConfig, projectDir, readStdinJson } from "./lib.mjs";
+import { baseRef, binaryName, commandIndex, commandSegments, detectBaseBranch, loadConfig, projectDir, readStdinJson, run } from "./lib.mjs";
 
 const SECRET_NAME = [
   /^\.env(\..+)?$/,
@@ -305,6 +308,42 @@ function reviewerMayRun(command, config) {
   return commandSegments(unsplittable).every((words) => reviewerMayRunSegment(words, config));
 }
 
+const EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit"]);
+
+// The base branch's name when `file` is project work done on it, else null.
+// `issue new` writes the issue file and `issue start` carries the plan file
+// onto the branch, so those, and .claude/, are not project work. A repo whose
+// base branch has no commit yet is a new project: nothing to branch from.
+function baseBranchOfEdit(file, baseDir, config) {
+  const relative = toSlashes(path.relative(projectDir, path.resolve(baseDir, file)));
+  if (relative === ".." || relative.startsWith("../") || path.isAbsolute(relative)) return null;
+  const issueFlowPaths = [".claude/", "docs/plans/", config.issuesDir && `${toSlashes(config.issuesDir)}/`];
+  if (issueFlowPaths.some((prefix) => prefix && relative.startsWith(prefix))) return null;
+
+  const branch = run(["git", "branch", "--show-current"]).stdout.trim();
+  if (!branch) return null;
+  const base = detectBaseBranch(config);
+  return branch === base && baseRef(base) ? base : null;
+}
+
+// Ask the user, or block when the check's mode is "deny".
+function askOrBlock(reason, mode) {
+  if (mode === "deny") {
+    console.error(`Blocked: ${reason}`);
+    process.exit(2);
+  }
+  console.log(
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "ask",
+        permissionDecisionReason: reason,
+      },
+    }),
+  );
+  process.exit(0);
+}
+
 const config = loadConfig();
 const input = await readStdinJson();
 const toolInput = input?.tool_input ?? {};
@@ -321,6 +360,14 @@ if (blockedSecret) {
   process.exit(2);
 }
 
+const editedBase = EDIT_TOOLS.has(input?.tool_name) && target && config.guard.baseBranch !== "off" ? baseBranchOfEdit(target, shellDir, config) : null;
+if (editedBase) {
+  askOrBlock(
+    `This edits a project file on the base branch (${editedBase}). Start from an issue and a branch: run /dev-kit:issue new, then /dev-kit:issue start <N>. Needs your explicit yes.`,
+    config.guard.baseBranch,
+  );
+}
+
 if (shellTool && input?.agent_type === REVIEWER && !reviewerMayRun(toolInput.command ?? "", config)) {
   console.error(
     "Blocked: the reviewer is read-only. It may run git, gh and glab commands that inspect, the project's check scripts, kit-config and plain file readers, without redirects into files. Report the change you wanted to make as a finding instead.",
@@ -335,17 +382,4 @@ const reasons = commandSegments(toolInput.command ?? "", { blankQuotes: true })
   .filter(Boolean);
 if (reasons.length === 0) process.exit(0);
 
-const reason = `${[...new Set(reasons)].join("; ")}. Needs your explicit yes.`;
-if (config.guard.git === "deny") {
-  console.error(`Blocked: ${reason}`);
-  process.exit(2);
-}
-console.log(
-  JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      permissionDecision: "ask",
-      permissionDecisionReason: reason,
-    },
-  }),
-);
+askOrBlock(`${[...new Set(reasons)].join("; ")}. Needs your explicit yes.`, config.guard.git);

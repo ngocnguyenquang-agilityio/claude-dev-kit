@@ -68,13 +68,14 @@ Every key is optional:
   "issuesDir": "docs/issues",
   "scripts": { "typecheck": "check-types", "formatCheck": "format:check" },
   "enforcePackageManager": true,
-  "guard": { "git": "ask" },
+  "guard": { "git": "ask", "baseBranch": "ask" },
   "sessionStart": { "context": true },
   "stopChecks": ["typecheck", "lint", "relatedTests"]
 }
 ```
 
 - `guard.git`: `"ask"` (default) prompts you each time, `"deny"` blocks outright, `"off"` disables the check. Secret-file blocking stays on regardless.
+- `guard.baseBranch`: `"ask"` (default) prompts you before `Edit`, `Write` or `MultiEdit` changes a project file while you are on the base branch, and points at `/dev-kit:issue new`; `"deny"` blocks outright, `"off"` disables the check. It skips files outside the project, `.claude/`, `docs/plans/` and your `issuesDir`, which the issue flow writes on the base branch, and a repository whose base branch has no commit yet.
 
 The safety guard matches patterns in the command text. It catches mistakes, not a determined reader: a secret read through `node -e` or `python -c`, a PowerShell `[IO.File]` call, a glob (`cat .en*`), a variable (`f=.env; cat $f`) or an earlier `cd` (`cd ~ && cat .npmrc`) gets past it. Two settings in the project's `.claude/settings.json` go further:
 

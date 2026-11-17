@@ -600,6 +600,102 @@ describe("safety-guard", () => {
   }
 });
 
+describe("safety-guard on the base branch", () => {
+  const edit = (file, tool = "Edit") => ({ tool_name: tool, tool_input: { file_path: file } });
+
+  // A project with one commit on `main`, checked out on `branch`. `kitJson`
+  // goes to .claude/kit.json and `dirs` are created before the first call.
+  function projectOn(branch, { kitJson, dirs = [] } = {}) {
+    const project = branchWithCommits("feat/x", []);
+    spawnSync("git", ["checkout", "-q", branch], { cwd: project });
+    for (const dir of dirs) fs.mkdirSync(path.join(project, dir), { recursive: true });
+    if (kitJson) {
+      fs.mkdirSync(path.join(project, ".claude"), { recursive: true });
+      fs.writeFileSync(path.join(project, ".claude", "kit.json"), JSON.stringify(kitJson));
+    }
+    return project;
+  }
+
+  for (const tool of ["Edit", "Write", "MultiEdit"]) {
+    it(`asks before ${tool} of a project file on the base branch, and names the issue flow`, () => {
+      const result = runHook("safety-guard.mjs", projectOn("main"), edit("src/app.ts", tool));
+      const decision = JSON.parse(result.out).hookSpecificOutput;
+
+      assert.equal(result.code, 0);
+      assert.equal(decision.permissionDecision, "ask");
+      assert.match(decision.permissionDecisionReason, /\/dev-kit:issue new/);
+    });
+  }
+
+  it("stays silent on a feature branch", () => {
+    assert.deepEqual(runHook("safety-guard.mjs", projectOn("feat/x"), edit("src/app.ts")), { code: 0, out: "", err: "" });
+  });
+
+  // Claude Code sends absolute paths, and a path may wander through `..`.
+  it("asks for an absolute path and a path with .. inside the project", () => {
+    const project = projectOn("main");
+
+    for (const file of [path.join(project, "src", "app.ts"), path.join(project, "src", "..", "src", "app.ts")]) {
+      assert.match(runHook("safety-guard.mjs", project, edit(file)).out, /"ask"/);
+    }
+  });
+
+  it("blocks instead of asking when guard.baseBranch is deny", () => {
+    const project = projectOn("main", { kitJson: { guard: { baseBranch: "deny" } } });
+    const result = runHook("safety-guard.mjs", project, edit("src/app.ts"));
+
+    assert.equal(result.code, 2);
+    assert.match(result.err, /\/dev-kit:issue new/);
+  });
+
+  it("stays silent when guard.baseBranch is off", () => {
+    const project = projectOn("main", { kitJson: { guard: { baseBranch: "off" } } });
+
+    assert.deepEqual(runHook("safety-guard.mjs", project, edit("src/app.ts")), { code: 0, out: "", err: "" });
+  });
+
+  it("keeps asking when only guard.git is off, the two switches are separate", () => {
+    const project = projectOn("main", { kitJson: { guard: { git: "off" } } });
+
+    assert.match(runHook("safety-guard.mjs", project, edit("src/app.ts")).out, /"ask"/);
+  });
+
+  it("follows the base branch set in kit.json", () => {
+    const project = projectOn("feat/x", { kitJson: { baseBranch: "feat/x" } });
+
+    assert.match(runHook("safety-guard.mjs", project, edit("src/app.ts")).out, /"ask"/);
+  });
+
+  for (const file of [".claude/settings.json", "docs/plans/2026-01-01-thing.md", "docs/issues/50-thing.md", "docs/issues/README.md"]) {
+    it(`stays silent for ${file}, the issue flow writes it on the base branch`, () => {
+      const project = projectOn("main", { dirs: ["docs/issues"] });
+
+      assert.deepEqual(runHook("safety-guard.mjs", project, edit(file, "Write")), { code: 0, out: "", err: "" });
+    });
+  }
+
+  it("stays silent for a file outside the project", () => {
+    const outside = path.join(os.tmpdir(), "dev-kit-elsewhere.ts");
+
+    assert.deepEqual(runHook("safety-guard.mjs", projectOn("main"), edit(outside)), { code: 0, out: "", err: "" });
+  });
+
+  it("stays silent outside a git repository", () => {
+    assert.deepEqual(runHook("safety-guard.mjs", pnpmProject(), edit("src/app.ts")), { code: 0, out: "", err: "" });
+  });
+
+  it("stays silent in a repository with no commit yet", () => {
+    const project = makeProject({}, { git: true });
+    spawnSync("git", ["symbolic-ref", "HEAD", "refs/heads/main"], { cwd: project });
+
+    assert.deepEqual(runHook("safety-guard.mjs", project, edit("src/app.ts")), { code: 0, out: "", err: "" });
+  });
+
+  it("still blocks a secret file first", () => {
+    assert.match(runHook("safety-guard.mjs", projectOn("main"), edit(".env")).err, /secret file/);
+  });
+});
+
 describe("session-start", () => {
   it("prints the rules and the project context", () => {
     const project = makeProject({ "package.json": { scripts: { test: "x" } }, "pnpm-lock.yaml": "" }, { git: true });
