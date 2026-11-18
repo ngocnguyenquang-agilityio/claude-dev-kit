@@ -21,6 +21,6 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 45 | [Focus the kit on its purpose](45-focus-kit-scope.md) | closed | none |
 | 47 | [Handoff skill: behavior evals and a Next-items rule](47-handoff-evals.md) | open | none |
 | 49 | [Safety guard: ask before editing files on the base branch](49-base-branch-edit-guard.md) | closed | none |
-| 51 | [Stop checks: run without package.json, re-run on config edits, report timeouts](51-stop-checks-reliability.md) | open | none |
+| 51 | [Stop checks: run without package.json, re-run on config edits, report timeouts](51-stop-checks-reliability.md) | closed | none |
 
 Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49 and 51 are independent of them and of each other.
