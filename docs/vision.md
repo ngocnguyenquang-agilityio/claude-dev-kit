@@ -25,7 +25,7 @@ Quality workflow:
 Session memory:
 
 - Skill: `handoff`
-- Hook: SessionStart (loads the working rules, the checks and the branch's handoff note)
+- Hooks: SessionStart (loads the working rules, the checks and the branch's handoff note), Context nudge (once per session, asks you to run `handoff` when the context is nearly full)
 
 Safety guard:
 

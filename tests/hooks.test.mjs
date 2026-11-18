@@ -1185,6 +1185,84 @@ describe("notify", () => {
   });
 });
 
+describe("context-nudge", () => {
+  // Lines shaped like a real Claude Code transcript: usage sits on the
+  // assistant message, and the context is the sum of the three input fields.
+  const entry = (timestamp, usage) =>
+    JSON.stringify({ type: usage ? "assistant" : "user", timestamp, message: { role: usage ? "assistant" : "user", ...(usage && { usage }) } });
+  const usage = (cacheRead) => ({ input_tokens: 2, cache_creation_input_tokens: 1999, cache_read_input_tokens: cacheRead, output_tokens: 219 });
+
+  let counter = 0;
+  const sessionId = () => `nudge-test-${process.pid}-${counter++}`;
+  const transcript = (project, lines) => {
+    const file = path.join(project, "transcript.jsonl");
+    fs.writeFileSync(file, lines.join("\n"));
+    return file;
+  };
+  const prompt = (project, file, id) => runHook("context-nudge.mjs", project, { session_id: id, transcript_path: file });
+  const long = () => [entry("2026-01-01T00:00:00Z"), entry("2026-01-01T00:01:00Z", usage(160000))];
+
+  after(() => {
+    for (const name of fs.readdirSync(os.tmpdir())) {
+      if (name.startsWith(`dev-kit-nudge-nudge-test-${process.pid}-`)) fs.rmSync(path.join(os.tmpdir(), name), { force: true });
+    }
+  });
+
+  it("stays silent below the threshold", () => {
+    const project = makeProject({}, { git: true });
+    const { code, out } = prompt(project, transcript(project, [entry("2026-01-01T00:00:00Z"), entry("2026-01-01T00:01:00Z", usage(81413))]), sessionId());
+
+    assert.equal(code, 0);
+    assert.equal(out, "");
+  });
+
+  it("nudges once past the threshold, summing all three input fields", () => {
+    const project = makeProject({}, { git: true });
+    const file = transcript(project, long());
+    const id = sessionId();
+    const first = prompt(project, file, id);
+
+    assert.equal(first.code, 0);
+    assert.match(JSON.parse(first.out).systemMessage, /162k tokens.*\/dev-kit:handoff/);
+    assert.equal(prompt(project, file, id).out, "");
+  });
+
+  it("uses contextWarnTokens from kit.json", () => {
+    const project = makeProject({ ".claude/kit.json": { contextWarnTokens: 200000 } }, { git: true });
+
+    assert.equal(prompt(project, transcript(project, long()), sessionId()).out, "");
+  });
+
+  it("stays silent and exits 0 on a missing, empty or renamed-usage transcript", () => {
+    const project = makeProject({}, { git: true });
+    const renamed = JSON.stringify({ type: "assistant", message: { usage: { prompt_tokens: 999999 } } });
+
+    for (const file of [path.join(project, "missing.jsonl"), transcript(project, []), transcript(project, ["not json", renamed])]) {
+      const { code, out } = prompt(project, file, sessionId());
+      assert.equal(code, 0);
+      assert.equal(out, "");
+    }
+    assert.equal(runHook("context-nudge.mjs", project, {}).code, 0);
+  });
+
+  it("stays silent when the input has no session id", () => {
+    const project = makeProject({}, { git: true });
+    const { code, out } = runHook("context-nudge.mjs", project, { transcript_path: transcript(project, long()) });
+
+    assert.equal(code, 0);
+    assert.equal(out, "");
+  });
+
+  it("skips when the branch note was written after the session began", () => {
+    const project = makeProject({}, { git: true });
+    const branch = spawnSync("git", ["branch", "--show-current"], { cwd: project, encoding: "utf8" }).stdout.trim();
+    fs.mkdirSync(path.join(project, ".claude", "wip"), { recursive: true });
+    fs.writeFileSync(path.join(project, ".claude", "wip", `${branch.replaceAll("/", "-")}.md`), "note");
+
+    assert.equal(prompt(project, transcript(project, long()), sessionId()).out, "");
+  });
+});
+
 describe("hooks.json", () => {
   const { hooks } = JSON.parse(fs.readFileSync(path.join(hooksDir, "hooks.json"), "utf8"));
   const handlers = (event) => hooks[event].flatMap((group) => group.hooks);
@@ -1203,6 +1281,10 @@ describe("hooks.json", () => {
     const guard = handlers("PreToolUse").find((handler) => script(handler) === "safety-guard.mjs");
 
     assert.equal(guard.onFailure, "block");
+  });
+
+  it("runs context-nudge on UserPromptSubmit", () => {
+    assert.deepEqual(handlers("UserPromptSubmit").map(script), ["context-nudge.mjs"]);
   });
 
   it("runs only stop-checks on Stop, so a failing check sends no parallel notification", () => {

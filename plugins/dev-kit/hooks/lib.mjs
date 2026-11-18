@@ -255,6 +255,9 @@ export function loadConfig() {
     // All checks together get this long. The Stop hook is cut off at 300 s
     // without a word, so the default leaves room to report a timeout first.
     stopCheckTimeoutSeconds: positiveNumber(override.stopCheckTimeoutSeconds) ?? 270,
+    // Context size (tokens) at which the nudge to run handoff appears. The
+    // default suits a 200k window.
+    contextWarnTokens: positiveNumber(override.contextWarnTokens) ?? 150000,
   };
 }
 
