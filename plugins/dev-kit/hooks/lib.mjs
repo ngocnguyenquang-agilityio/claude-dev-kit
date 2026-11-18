@@ -49,6 +49,13 @@ function throughCmd(words) {
   return [process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", `"${line}"`], { windowsVerbatimArguments: true }];
 }
 
+// Where and how every program the hooks start runs: in the project root, with
+// colours off.
+const spawnOptions = () => ({
+  cwd: projectDir,
+  env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
+});
+
 // Run a program in the project root. `words` is the program and its
 // arguments; no shell reads them, so a file name can't run commands. Colours
 // are off so feedback to Claude is plain text. `stdout` is untrimmed, for
@@ -56,14 +63,52 @@ function throughCmd(words) {
 export function run(words) {
   const [program, args, options] = throughCmd(words) ?? [words[0], words.slice(1), {}];
   const result = spawnSync(program, args, {
-    cwd: projectDir,
+    ...spawnOptions(),
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
-    env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
     ...options,
   });
   const output = [result.error?.message, result.stdout, result.stderr].filter(Boolean).join("\n");
   return { ok: result.status === 0, output: output.trim(), stdout: result.stdout ?? "" };
+}
+
+// Like run(), but gives up after `timeoutMs` and stops the whole process
+// tree. spawnSync's own timeout kills only the program it started, and a shim
+// like npm.cmd starts cmd.exe, which starts the real program, which would keep
+// running. Killing has to happen while the parent still lives, so this is
+// async. `timedOut` tells a program that ran too long from one that failed.
+export function runTimed(words, timeoutMs) {
+  const [program, args, options] = throughCmd(words) ?? [words[0], words.slice(1), {}];
+  return new Promise((resolve) => {
+    const child = spawn(program, args, {
+      ...spawnOptions(),
+      // A process group on POSIX, so one signal reaches the children too.
+      detached: process.platform !== "win32",
+      ...options,
+    });
+    let output = "";
+    let timedOut = false;
+    child.stdout.on("data", (chunk) => (output += chunk));
+    child.stderr.on("data", (chunk) => (output += chunk));
+    const finishWith = (ok, extra = "") => {
+      clearTimeout(timer);
+      resolve({ ok, timedOut, output: (output + extra).trim() });
+    };
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], { stdio: "ignore" });
+        else process.kill(-child.pid, "SIGKILL");
+      } catch {
+        // The program ended just before the kill: nothing left to stop.
+      }
+      // Don't wait for `close`: a child that escaped the kill can keep the
+      // output pipes open, and the hook would hang until it is cut off.
+      finishWith(false);
+    }, timeoutMs);
+    child.on("error", (error) => finishWith(false, error.message));
+    child.on("close", (code) => finishWith(code === 0));
+  });
 }
 
 // A relative path for a tool's command line. A name starting with "-" (say
@@ -160,6 +205,10 @@ const SCRIPT_NAMES = {
 export const BRANCH_PATTERN = /^(feat|fix|chore|docs|test|refactor)\/(.+)$/;
 const COMMIT_ISSUE = /^(?:feat|fix|chore|docs|test|refactor)\(#(\d+)\):/;
 
+// A setting that is a number above zero, else null: 0 or text would give every
+// check no time at all.
+const positiveNumber = (value) => (Number.isFinite(value) && value > 0 ? value : null);
+
 // Everything the hooks and skills need to know about the current project.
 // Detected from lockfiles and package.json, then overridden by the optional
 // `.claude/kit.json`. No git calls here, so cheap hooks stay fast.
@@ -176,8 +225,16 @@ export function loadConfig() {
     scripts[key] = override.scripts?.[key] ?? names.find((name) => packageJson?.scripts?.[name]) ?? null;
   }
 
+  // Extra checks as argv arrays, never shell text: {"test": ["node", "--test"]}.
+  const checks = Object.fromEntries(
+    Object.entries(override.checks ?? {}).filter(
+      ([, words]) => Array.isArray(words) && words.length > 0 && words.every((word) => typeof word === "string"),
+    ),
+  );
+
   return {
     hasPackageJson: Boolean(packageJson),
+    checks,
     packageManager,
     exec: packageManager ? EXEC[packageManager] : null,
     // Only enforce a package manager when the project shows which one it uses.
@@ -193,7 +250,11 @@ export function loadConfig() {
     issuesDir: override.issuesDir ?? (fs.existsSync(path.join(projectDir, "docs", "issues")) ? "docs/issues" : null),
     guard: { git: "ask", baseBranch: "ask", ...override.guard },
     sessionStart: { context: true, ...override.sessionStart },
-    stopChecks: override.stopChecks ?? ["typecheck", "lint", "relatedTests"],
+    // A Set, so a `checks` entry named like a built-in check runs once.
+    stopChecks: override.stopChecks ?? [...new Set(["typecheck", "lint", "relatedTests", ...Object.keys(checks), "nodeTests"])],
+    // All checks together get this long. The Stop hook is cut off at 300 s
+    // without a word, so the default leaves room to report a timeout first.
+    stopCheckTimeoutSeconds: positiveNumber(override.stopCheckTimeoutSeconds) ?? 270,
   };
 }
 

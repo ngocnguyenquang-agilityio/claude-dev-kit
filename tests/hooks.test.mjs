@@ -33,7 +33,9 @@ function runHook(hook, project, input = {}, env = {}) {
     cwd: project,
     input: JSON.stringify(input),
     encoding: "utf8",
-    env: { ...process.env, CLAUDE_PROJECT_DIR: project, CLAUDE_NOTIFY: "0", ...env },
+    // NODE_TEST_CONTEXT comes from the `node --test` running this file. Passed
+    // on, it makes a `node --test` inside a hook exit 0 whatever the tests do.
+    env: { ...process.env, NODE_TEST_CONTEXT: undefined, CLAUDE_PROJECT_DIR: project, CLAUDE_NOTIFY: "0", ...env },
   });
   return { code: result.status, out: result.stdout.trim(), err: result.stderr.trim() };
 }
@@ -869,6 +871,106 @@ describe("stop-checks", () => {
     assert.equal(result.code, 2);
     assert.match(result.err, /npm run typecheck failed/);
     assert.match(result.err, /TS2322/);
+  });
+
+  // A project with no package.json, the way this repo is.
+  const failingTest = "import test from 'node:test';\nimport assert from 'node:assert';\ntest('x', () => assert.equal(1, 2));\n";
+  const passingTest = "import test from 'node:test';\ntest('x', () => {});\n";
+  const bare = (files) => makeProject({ "src/a.mjs": "export const a = 1;\n", ...files }, { git: true });
+
+  it("runs the Node tests of a project with no package.json and sends a failure back", () => {
+    const result = runHook("stop-checks.mjs", bare({ "tests/a.test.mjs": failingTest }), {});
+
+    assert.equal(result.code, 2);
+    assert.match(result.err, /node --test .*a\.test\.mjs failed/);
+  });
+
+  it("passes when the Node tests of a project with no package.json pass", () => {
+    assert.equal(runHook("stop-checks.mjs", bare({ "tests/a.test.mjs": passingTest }), {}).code, 0);
+  });
+
+  it("runs a check named in kit.json instead of looking for Node tests", () => {
+    const project = bare({
+      "tests/a.test.mjs": failingTest,
+      ".claude/kit.json": { checks: { custom: ["node", "-e", "process.exit(0)"] } },
+    });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+  });
+
+  it("sends a failing kit.json check back to Claude", () => {
+    const project = bare({ ".claude/kit.json": { checks: { custom: ["node", "-e", "console.error('boom'); process.exit(1)"] } } });
+    const result = runHook("stop-checks.mjs", project, {});
+
+    assert.equal(result.code, 2);
+    assert.match(result.err, /boom/);
+  });
+
+  it("does not run a kit.json check through a shell", () => {
+    const project = bare({ ".claude/kit.json": { checks: { custom: ["node", "-e", "process.exit(0)", "&& echo hacked > hacked.txt"] } } });
+    runHook("stop-checks.mjs", project, {});
+
+    assert.equal(fs.existsSync(path.join(project, "hacked.txt")), false);
+  });
+
+  it("stays quiet in a project with no package.json and no tests", () => {
+    assert.equal(runHook("stop-checks.mjs", bare({}), {}).code, 0);
+  });
+
+  it("runs the checks again when only a check's config changes", () => {
+    const project = withScripts({ typecheck: counting(0) }, { ".gitignore": "runs.log\n" });
+    runHook("stop-checks.mjs", project, {});
+    spawnSync("git", ["add", "."], { cwd: project });
+    spawnSync("git", ["commit", "-qm", "init"], { cwd: project });
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 1, "the clean tree after the commit runs nothing");
+
+    // Not a code file, so only the config rule can make this run the checks.
+    fs.writeFileSync(path.join(project, ".eslintrc.json"), "{}\n");
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 2, "a new ESLint config");
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 2, "an unchanged tree is skipped");
+
+    const manifest = path.join(project, "package.json");
+    fs.writeFileSync(manifest, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifest, "utf8")), description: "x" }));
+    runHook("stop-checks.mjs", project, {});
+    assert.equal(runCount(project), 3, "an edit to a tracked package.json");
+  });
+
+  it("ignores a tracked test file that was deleted and not yet committed", () => {
+    const project = bare({ "tests/a.test.mjs": passingTest });
+    spawnSync("git", ["add", "."], { cwd: project });
+    spawnSync("git", ["commit", "-qm", "init"], { cwd: project });
+    fs.rmSync(path.join(project, "tests/a.test.mjs"));
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+  });
+
+  it("runs a kit.json check named like a built-in check once", () => {
+    const append = ["node", "-e", "require('fs').appendFileSync('runs.log','x')"];
+    const project = bare({ ".claude/kit.json": { checks: { lint: append } } });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+    assert.equal(runCount(project), 1);
+  });
+
+  it("falls back to the default time limit when stopCheckTimeoutSeconds is 0", () => {
+    const project = withScripts({ typecheck: passing }, { ".claude/kit.json": { stopCheckTimeoutSeconds: 0 } });
+
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+  });
+
+  it("reports a check that outlives the time limit instead of passing it", () => {
+    const sleeping = "node -e \"console.log('still-working'); setTimeout(() => {}, 30000)\"";
+    const project = withScripts({ typecheck: sleeping }, { ".claude/kit.json": { stopCheckTimeoutSeconds: 1 } });
+
+    const result = runHook("stop-checks.mjs", project, {});
+
+    assert.equal(result.code, 2);
+    assert.match(result.err, /The 1 s that all stop checks share ran out while npm run typecheck was running/);
+    assert.match(result.err, /still-working/, "the output so far reaches Claude");
+    assert.equal(runHook("stop-checks.mjs", project, {}).code, 2, "a timeout is not remembered as a pass");
   });
 
   it("sends a failing lint back to Claude", () => {
