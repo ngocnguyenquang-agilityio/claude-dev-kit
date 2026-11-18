@@ -30,7 +30,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | Safety guard | Blocks reading or editing secret files: `.env*`, `.envrc`, keys (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`...), `.netrc`, `.git-credentials`, `.pypirc`, `*.tfvars`, `credentials.json`, `~/.npmrc`, `.docker/config.json` and anything under `.ssh`, `.aws`, `.gnupg` or `.kube`. The guard lets `.example`, `.sample`, `.template` and `.dist` copies through; the `permissions.deny` example below does not. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, commands that throw away uncommitted changes (`git checkout -- <path>`, `git restore`, `git switch -C`, `git rm -f`), recursive deletes (`rm -r`, `Remove-Item -r`, `rd /s`, `del /s`), and any `gh`/`glab` command not on its read-only list (`pr view`, `run list`, `api` with GET and no body, ...). Keeps the `reviewer` agent read-only: its Bash calls may only inspect. |
 | Package-manager guard | Blocks the package managers the project's lockfile does not use. No lockfile, no enforcement. |
 | Format on edit | Runs Prettier and `eslint --fix` on the edited file, when the project has them. |
-| Stop checks | At the end of a turn that changed code: typecheck, lint, and the tests related to the changed files. Failures go back to Claude. A passing run is remembered in `.git/dev-kit-stop-checks`, so the checks run again only after the code or the check commands change. |
+| Stop checks | At the end of a turn that changed code: typecheck, lint, and the tests related to the changed files. With no `package.json`, it runs the project's Node test files (`node --test`) instead, or the commands in `checks`. Failures go back to Claude, and so does a check that runs past the time limit. A passing run is remembered in `.git/dev-kit-stop-checks`, so the checks run again only after the code, the check commands or the config (`package.json`, `tsconfig.json`, ESLint config) change. |
 | Notify | Desktop notification when Claude finishes or waits. `CLAUDE_NOTIFY=0` turns it off. |
 
 **Skills** (use as `/dev-kit:<name>`)
@@ -70,7 +70,9 @@ Every key is optional:
   "enforcePackageManager": true,
   "guard": { "git": "ask", "baseBranch": "ask" },
   "sessionStart": { "context": true },
-  "stopChecks": ["typecheck", "lint", "relatedTests"]
+  "stopChecks": ["typecheck", "lint", "relatedTests", "test"],
+  "checks": { "test": ["node", "--test", "tests/"] },
+  "stopCheckTimeoutSeconds": 270
 }
 ```
 
@@ -96,7 +98,9 @@ The safety guard matches patterns in the command text. It catches mistakes, not 
   "sandbox": { "enabled": true, "filesystem": { "denyRead": ["~/.ssh"] } }
 }
 ```
-- `stopChecks`: the checks that run at the end of a turn. `[]` turns them off.
+- `stopChecks`: the checks that run at the end of a turn. `[]` turns them off. The default is `typecheck`, `lint`, `relatedTests`, every name in `checks`, and `nodeTests`, which runs only when the project has no `package.json` and no `checks`.
+- `checks`: extra stop checks, each a name and a command as a list of words. No shell reads it, so a file name cannot run commands. A name you add is run unless `stopChecks` leaves it out, so list it there when you set `stopChecks` yourself. An entry named like a built-in check (`lint`, say) replaces that check. The checks start only after a JS or TS file, `package.json`, `tsconfig.json` or an ESLint config changes, so `checks` does not help a project in another language.
+- `stopCheckTimeoutSeconds`: how long all stop checks together may run, 270 by default; anything that is not a number above zero means the default. The hook is cut off silently at 300 s, so a check that overruns is stopped, with its child processes, and reported to Claude instead.
 - `sessionStart.context`: set to `false` to leave the branch, package manager, checks and handoff note out of the session. The working rules always print.
 
 Print what was resolved for the current project:

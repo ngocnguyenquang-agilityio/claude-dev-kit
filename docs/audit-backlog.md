@@ -2,14 +2,10 @@
 
 Open points from the dev-kit audit, numbered A6-A26 to keep them apart from issue numbers. A1-A5 shipped as #15-#17. File each one as an issue with `/dev-kit:issue new` before working on it, then remove it here.
 
-Done since the audit: A8 (handoff notes never expired) and A10 (`handoff` `allowed-tools` missing git commands and writes), both in #28; A15 (README test count), A22 for `issue` (#30) and `review` (#32).
+Done since the audit: A8 (handoff notes never expired) and A10 (`handoff` `allowed-tools` missing git commands and writes), both in #28; A15 (README test count), A22 for `issue` (#30) and `review` (#32); A7 (`~/.claude/rules` is empty, the rules live in the kit); A11, A12 and A13 in #51.
 
 ## Medium
 
-- A7. Move the rules in `~/.claude/rules` into the kit so one source remains (they are injected twice today and disagree: review fix Should fix vs show judgement calls).
-- A11. Stop checks are JS/TS only: skipped with no `package.json` (this repo too), and `relatedTests` misses `node --test`.
-- A12. Stop checks ignore config edits (`package.json`, eslint config).
-- A13. A Stop hook timeout (300 s) is silent: no notification, no feedback.
 - A14. The package-manager guard blocks read-only `npm view`/`npm ls` in pnpm projects.
 
 ## Low
