@@ -32,6 +32,7 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 | Format on edit | Runs Prettier and `eslint --fix` on the edited file, when the project has them. |
 | Stop checks | At the end of a turn that changed code: typecheck, lint, and the tests related to the changed files. With no `package.json`, it runs the project's Node test files (`node --test`) instead, or the commands in `checks`. Failures go back to Claude, and so does a check that runs past the time limit. A passing run is remembered in `.git/dev-kit-stop-checks`, so the checks run again only after the code, the check commands or the config (`package.json`, `tsconfig.json`, ESLint config) change. |
 | Notify | Desktop notification when Claude finishes or waits. `CLAUDE_NOTIFY=0` turns it off. |
+| Context nudge | Once per session, when the context passes `contextWarnTokens` (150000 by default), shows a line asking you to run `/dev-kit:handoff` and continue in a fresh session. Skipped when this branch's note was written during the session. It never blocks a prompt. |
 
 **Skills** (use as `/dev-kit:<name>`)
 
@@ -101,6 +102,7 @@ The safety guard matches patterns in the command text. It catches mistakes, not 
 - `stopChecks`: the checks that run at the end of a turn. `[]` turns them off. The default is `typecheck`, `lint`, `relatedTests`, every name in `checks`, and `nodeTests`, which runs only when the project has no `package.json` and no `checks`.
 - `checks`: extra stop checks, each a name and a command as a list of words. No shell reads it, so a file name cannot run commands. A name you add is run unless `stopChecks` leaves it out, so list it there when you set `stopChecks` yourself. An entry named like a built-in check (`lint`, say) replaces that check. The checks start only after a JS or TS file, `package.json`, `tsconfig.json` or an ESLint config changes, so `checks` does not help a project in another language.
 - `stopCheckTimeoutSeconds`: how long all stop checks together may run, 270 by default; anything that is not a number above zero means the default. The hook is cut off silently at 300 s, so a check that overruns is stopped, with its child processes, and reported to Claude instead.
+- `contextWarnTokens`: the context size, in tokens, at which the nudge to run `handoff` appears, 150000 by default (suits a 200k window); anything that is not a number above zero means the default. It counts the last reply's `input_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens` from the transcript, so a transcript without those fields gives no nudge.
 - `sessionStart.context`: set to `false` to leave the branch, package manager, checks and handoff note out of the session. The working rules always print.
 
 Print what was resolved for the current project:
@@ -125,7 +127,7 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 node --test tests/hooks.test.mjs
 ```
 
-324 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file and notify, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
+359 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file, notify and context-nudge, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
 
 Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template), `plan` (a multi-file feature, a rename that needs no plan and must not call `impact-mapper`, a change whose callers sit behind aliases in a 122-file app, the same change with the `impact-mapper` agent blocked), `handoff` (a plain note, a focus argument that must come first, a key in the conversation that must not reach the note) and `review` (a boundary bug the new test misses, a correct change that looks like a bug, a bug outside the diff, a change the request did not ask for): each checks that the skill fires and that the answer follows it, except `plan-skip-trivial`, which checks that a one-sentence change gets no plan, and the `handoff` cases, which grade the note text only (a slash command in the prompt is not a `Skill` call). Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
 
