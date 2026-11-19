@@ -44,7 +44,7 @@ A new skill, agent or hook names the pillar it serves and ships with at least on
 
 ## Review cadence
 
-Before every minor release, run an inventory: how often each component was used, and which components have an eval. Remove what is unused or unproven.
+Before every minor release, run an inventory: how often each component was used, and which components have an eval. Remove what is unused or unproven. `node scripts/inventory.mjs` prints this table from the repo's Claude Code transcripts, the eval cases and the hook tests.
 
 ## Roadmap
 
