@@ -124,10 +124,10 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 ## Test
 
 ```bash
-node --test tests/hooks.test.mjs
+node --test tests/hooks.test.mjs tests/inventory.test.mjs
 ```
 
-359 tests run every hook as a separate process against throwaway projects: config detection, both guards, session-start, stop-checks, format-file, notify and context-nudge, plus the `hooks.json` wiring. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
+373 tests: 359 run every hook as a separate process against throwaway projects (config detection, both guards, session-start, stop-checks, format-file, notify and context-nudge, plus the `hooks.json` wiring), and 14 run `scripts/inventory.mjs` against a throwaway repo and transcript folder. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
 
 Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template), `plan` (a multi-file feature, a rename that needs no plan and must not call `impact-mapper`, a change whose callers sit behind aliases in a 122-file app, the same change with the `impact-mapper` agent blocked), `handoff` (a plain note, a focus argument that must come first, a key in the conversation that must not reach the note), `ship` (a commit message for a pasted diff, with the commands printed and not run) and `review` (a boundary bug the new test misses, a correct change that looks like a bug, a bug outside the diff, a change the request did not ask for): each checks that the skill fires and that the answer follows it, except `plan-skip-trivial`, which checks that a one-sentence change gets no plan, and the `handoff` and `ship` cases, which grade the answer text only (a slash command in the prompt is not a `Skill` call). Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
 
@@ -136,6 +136,8 @@ claude plugin eval plugins/dev-kit --scaffold --allow-tools Edit Write --ablatio
 ```
 
 `--ablation none` keeps the "skill fired" check in the score; with the default no-plugin comparison it is only an indicator, so a case could pass without the skill ever firing. `--scaffold` is needed for the `debug`, `handoff`, `issue`, `plan-skip-trivial`, `review` and `ship` cases, which build a small project before Claude starts. To see whether a skill makes a difference, run once more without `--ablation none`: the no-plugin baseline should fail some graders other than `skill-fired`. Run the `handoff` cases with `--judge-model sonnet`: the default judge failed notes that met every criterion. The `ship` case was also run with `sonnet`, not compared with the default judge. Shell tools cannot be granted to evals on Windows (no sandbox), so the cases do not rely on running commands, and a skill that loads context with a `` !`command` `` injection cannot load in them at all: check the run's evidence, not only `skill-fired`.
+
+Before a minor release, run `node scripts/inventory.mjs` for the review cadence in `docs/vision.md`. It prints a table of every skill, agent and registered hook with its uses, its evals or tests, and a flag `unused` or `unproven`. Uses come from this repo's Claude Code transcripts (`~/.claude/projects`, worktree folders included; `--since YYYY-MM-DD` limits the window) and only names and counts are read. A hook leaves no tool call, so its uses show as `not counted`; a skill run by slash command and by the `Skill` tool is counted once for each. Tests per hook are the `it(` lines in the `describe` blocks named after it, so a test written in a loop counts once.
 
 ## Develop
 
