@@ -6,14 +6,14 @@ Pillar 1 (quality workflow), and the review cadence in `docs/vision.md`: before 
 
 ## Tasks
 
-- [ ] Add `scripts/inventory.mjs`, plain Node with no dependencies, run as `node scripts/inventory.mjs`
-- [ ] List the components from the files: skills (`plugins/dev-kit/skills/*`), agents (`plugins/dev-kit/agents/*.md`) and hooks (`plugins/dev-kit/hooks/*.mjs` that `hooks.json` registers)
-- [ ] Count skill and agent use from this project's Claude Code transcripts (`~/.claude/projects/<project>/*.jsonl`): `Skill` and `Agent` tool calls by name, plus the slash-command forms, over all sessions or a `--since <date>` window
-- [ ] Mark which skills and agents have an eval case under `plugins/dev-kit/evals/` (by `input_match` and by case name prefix); for hooks, count the tests in `tests/hooks.test.mjs` that name them
-- [ ] Print one table: component, kind, uses, evals or tests, and a flag `unused` or `unproven` when uses is 0 or there is no eval or test
-- [ ] Read only tool names and counts from the transcripts; never print or store a prompt, a reply or a path from them. If the transcript folder is missing, say so and still print the eval and test columns
-- [ ] Add tests in `tests/inventory.test.mjs` with a small transcript fixture: counts per component, `--since` window, a component with no eval is flagged, missing folder
-- [ ] Mention the script in `docs/vision.md` (review cadence), `README.md` and `CHANGELOG.md`
+- [x] Add `scripts/inventory.mjs`, plain Node with no dependencies, run as `node scripts/inventory.mjs`
+- [x] List the components from the files: skills (`plugins/dev-kit/skills/*`), agents (`plugins/dev-kit/agents/*.md`) and hooks (`plugins/dev-kit/hooks/*.mjs` that `hooks.json` registers)
+- [x] Count skill and agent use from this project's Claude Code transcripts (`~/.claude/projects/<project>/*.jsonl`): `Skill` and `Agent` tool calls by name, plus the slash-command forms, over all sessions or a `--since <date>` window
+- [x] Mark which skills and agents have an eval case under `plugins/dev-kit/evals/`: a skill by the case name prefix, an agent by the graders that name it (`input_match` is not read, and today the result is the same); for hooks, count the tests in `tests/hooks.test.mjs` that name them
+- [x] Print one table: component, kind, uses, evals or tests, and a flag `unused` or `unproven` when uses is 0 or there is no eval or test
+- [x] Read only tool names and counts from the transcripts; never print or store a prompt, a reply or a path from them. If the transcript folder is missing, say so and still print the eval and test columns
+- [x] Add tests in `tests/inventory.test.mjs` with a small transcript fixture: counts per component, `--since` window, a component with no eval is flagged, missing folder
+- [x] Mention the script in `docs/vision.md` (review cadence), `README.md` and `CHANGELOG.md`
 
 ## Acceptance criteria
 
