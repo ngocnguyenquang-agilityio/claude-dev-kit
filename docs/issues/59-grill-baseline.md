@@ -6,12 +6,12 @@ Pillar 1 (quality workflow). Audit point A23 says the `grill` score of 1.0 has n
 
 ## Tasks
 
-- [ ] Run the three `grill` cases with the default no-plugin comparison (leave out `--ablation none`) and with `--ablation none`, 3 runs each, `--judge-model sonnet`: `claude plugin eval plugins/dev-kit --case 'grill-*' --scaffold --allow-tools Edit`
-- [ ] Note the with-skill and no-skill score of each case in `CHANGELOG.md`, with the run counts and the judge model
-- [ ] Read the no-skill runs of `grill-pushback` that passed and name what they do that `plugins/dev-kit/evals/grill-pushback/graders/criteria.md` accepts
-- [ ] Tighten that grader on what only the skill does (for example the options are lettered with `(Recommended)` on the first, at most 4 questions in the round, no plan or implementation steps), without failing the with-skill runs
-- [ ] Re-run `grill-pushback` 3 times with the skill and 3 without; the no-skill score must be below the with-skill score
-- [ ] Remove A23 from `docs/audit-backlog.md` and add it to the "Done since the audit" line
+- [x] Run the three `grill` cases with the default no-plugin comparison (leave out `--ablation none`) and with `--ablation none`, 3 runs each, `--judge-model sonnet`: `claude plugin eval plugins/dev-kit --case 'grill-*' --scaffold --allow-tools Edit`
+- [x] Note the with-skill and no-skill score of each case in `CHANGELOG.md`, with the run counts and the judge model
+- [x] Read the no-skill runs of `grill-pushback` that passed and name what they do that `plugins/dev-kit/evals/grill-pushback/graders/criteria.md` accepts
+- [x] Tighten that grader on what only the skill does (for example the options are lettered with `(Recommended)` on the first, at most 4 questions in the round, no plan or implementation steps), without failing the with-skill runs: it passed 5 of 6 runs with the skill (the default lot 2 of 3, the `--ablation none` lot 3 of 3) and 0 of 6 without, so the criterion "3 of 3 with the skill" held only in the second lot; `grill-vague-request` also needed a fixture (its folder was empty)
+- [x] Re-run `grill-pushback` 3 times with the skill and 3 without; the no-skill score must be below the with-skill score
+- [x] Remove A23 from `docs/audit-backlog.md` and add it to the "Done since the audit" line
 
 ## Acceptance criteria
 
