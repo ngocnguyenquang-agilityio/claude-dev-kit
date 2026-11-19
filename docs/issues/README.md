@@ -25,5 +25,6 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 53 | [Context nudge: suggest handoff when a session gets long](53-context-nudge.md) | closed | none |
 | 55 | [Evals for ship and a 3-of-3 bar for handoff-basic](55-ship-evals-handoff-3of3.md) | closed | none |
 | 57 | [Inventory script for the review cadence](57-inventory-script.md) | closed | none |
+| 59 | [Re-run the grill baseline and tighten grill-pushback](59-grill-baseline.md) | closed | none |
 
-Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55 and 57 are independent of them and of each other.
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57 and 59 are independent of them and of each other.
