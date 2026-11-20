@@ -6,26 +6,26 @@ Pillar 2 (session memory), roadmap item 4 in `docs/vision.md`. Replace Claude Co
 
 ## Tasks
 
-- [ ] `docs/vision.md`: record the memory-store design under Session memory, and add an exception to "Extending the safety guard" for the memory-store secret check
-- [ ] Working rules (`plugins/dev-kit/rules/working-rules.md`), each one line:
+- [x] `docs/vision.md`: record the memory-store design under Session memory, and add an exception to "Extending the safety guard" for the memory-store secret check
+- [x] Working rules (`plugins/dev-kit/rules/working-rules.md`), each one line:
   - Write durable project facts to `docs/memory/<topic>.md` and keep one index line per topic in `docs/memory.md`, with a link and when to read it.
   - Read a topic file before working on its topic.
   - Split a topic file once it passes about 150 lines.
   - Never write secrets, tokens or personal data to memory.
-- [ ] `session-start.mjs`: load `docs/memory.md` whole into the session context, and add a line asking to prune or merge topics once the index passes about 6,000 characters (the `additionalContext` cap is 10,000)
-- [ ] `safety-guard.mjs`: block `Write`, `Edit` and `MultiEdit` to `docs/memory.md` and `docs/memory/**` when the new content matches a secret pattern (keys, tokens, private keys, credential URLs)
-- [ ] `safety-guard.mjs`: add `docs/memory.md` and `docs/memory/**` to the `guard.baseBranch` skip list
-- [ ] Hook tests in `tests/hooks.test.mjs`:
+- [x] `session-start.mjs`: load `docs/memory.md` whole into the session context, and add a line asking to prune or merge topics once the index passes about 6,000 characters (the `additionalContext` cap is 10,000)
+- [x] `safety-guard.mjs`: block `Write`, `Edit` and `MultiEdit` to `docs/memory.md` and `docs/memory/**` when the new content matches a secret pattern (keys, tokens, private keys, credential URLs)
+- [x] `safety-guard.mjs`: add `docs/memory.md` and `docs/memory/**` to the `guard.baseBranch` skip list
+- [x] Hook tests in `tests/hooks.test.mjs`:
   - the index is loaded
   - the size warning appears above the threshold and not below
   - a secret written to memory is blocked, and a clean fact is not
   - the base-branch skip covers both paths
-- [ ] Evals under `plugins/dev-kit/evals/`:
+- [x] Evals under `plugins/dev-kit/evals/`:
   - `memory-cross-session`: a fact written to a topic file in session 1 is used in session 2 through the index
   - `memory-topic-read`: the right answer exists only in a topic file, and the reply uses it
   - `memory-secret`: an attempt to save a key to memory is blocked and the key never reaches the file
-- [ ] Set `"autoMemoryEnabled": false` in this repo's `.claude/settings.json`, and document the per-project setting in `README.md`
-- [ ] Mention the store in `README.md` and `CHANGELOG.md`
+- [x] Set `"autoMemoryEnabled": false` in this repo's `.claude/settings.json`, and document the per-project setting in `README.md`
+- [x] Mention the store in `README.md` and `CHANGELOG.md`
 
 ## Acceptance criteria
 
