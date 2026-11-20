@@ -11,8 +11,8 @@ One user: the repo owner. There is no support for other teams, other stacks or s
 ## Pillars
 
 1. **Quality workflow**: clarify, plan, debug, review and ship in small verified steps.
-2. **Session memory**: what one session learned reaches the next. `handoff` and Claude Code's native auto-memory share this job.
-3. **Safety guard**: a base layer that blocks or asks before risky actions. It stays as it is and is not extended.
+2. **Session memory**: what one session learned reaches the next. `handoff` keeps the per-branch notes; the kit's memory store (`docs/memory.md` and `docs/memory/`) keeps durable project facts and replaces Claude Code's native auto-memory.
+3. **Safety guard**: a base layer that blocks or asks before risky actions. It stays as it is and is not extended, except for the one check named under Not in scope.
 
 ## Components
 
@@ -25,7 +25,8 @@ Quality workflow:
 Session memory:
 
 - Skill: `handoff`
-- Hooks: SessionStart (loads the working rules, the checks and the branch's handoff note), Context nudge (once per session, asks you to run `handoff` when the context is nearly full)
+- Hooks: SessionStart (loads the working rules, the checks, the memory index `docs/memory.md` and the branch's handoff note), Context nudge (once per session, asks you to run `handoff` when the context is nearly full)
+- Memory store: the index `docs/memory.md` and topic files `docs/memory/<topic>.md`, written by Claude under the working rules and read on demand
 
 Safety guard:
 
@@ -36,7 +37,7 @@ Safety guard:
 - Skills that only wrap a command the project already has (releases, CI follow-up, a test-first loop).
 - Browser or UI verification.
 - Other stacks and other users.
-- Extending the safety guard.
+- Extending the safety guard. One exception: it blocks a secret in a write to the memory store (`docs/memory.md`, `docs/memory/`), since those files are committed.
 
 ## Gate for new components
 
@@ -53,4 +54,4 @@ In this order:
 1. **A11**: stop checks work without `package.json`. Done when they run on this repo and report real results.
 2. **A7**: the rules in `~/.claude/rules` move into the kit so one source remains. Done when `~/.claude/rules` holds no rule that the kit also holds.
 3. **Evals for `handoff` and `ship`**: Done when each skill has one eval that passes 3 of 3 runs. Done in #47 and #55: `handoff-basic` and `ship-commit`.
-4. **Kit-owned memory store**: only after items 1 to 3, with an eval, and after finding how to turn off native auto-memory. Done when one eval shows a fact written in one session is used in the next, and native auto-memory is off.
+4. **Kit-owned memory store**: only after items 1 to 3, with an eval, and after finding how to turn off native auto-memory. Done when one eval shows a fact written in one session is used in the next, and native auto-memory is off. In progress in #61.

@@ -26,8 +26,8 @@ Requires Node 18+ (the hooks are `.mjs` scripts) and `git`. The GitHub workflow 
 
 | Hook | What it does |
 |---|---|
-| SessionStart | Puts the working rules, the branch, the checks and this branch's handoff note into the session, with a warning when the note is behind HEAD; a note for a branch already merged into the base is skipped. A plugin cannot ship `CLAUDE.md`, so this stands in for it. |
-| Safety guard | Blocks reading or editing secret files: `.env*`, `.envrc`, keys (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`...), `.netrc`, `.git-credentials`, `.pypirc`, `*.tfvars`, `credentials.json`, `~/.npmrc`, `.docker/config.json` and anything under `.ssh`, `.aws`, `.gnupg` or `.kube`. The guard lets `.example`, `.sample`, `.template` and `.dist` copies through; the `permissions.deny` example below does not. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, commands that throw away uncommitted changes (`git checkout -- <path>`, `git restore`, `git switch -C`, `git rm -f`), recursive deletes (`rm -r`, `Remove-Item -r`, `rd /s`, `del /s`), and any `gh`/`glab` command not on its read-only list (`pr view`, `run list`, `api` with GET and no body, ...). Keeps the `reviewer` agent read-only: its Bash calls may only inspect. |
+| SessionStart | Puts the working rules, the memory index `docs/memory.md`, the branch, the checks and this branch's handoff note into the session, with a line asking to prune the index once it passes 6000 characters, and with a warning when the note is behind HEAD; a note for a branch already merged into the base is skipped. A plugin cannot ship `CLAUDE.md`, so this stands in for it. |
+| Safety guard | Blocks reading or editing secret files: `.env*`, `.envrc`, keys (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`...), `.netrc`, `.git-credentials`, `.pypirc`, `*.tfvars`, `credentials.json`, `~/.npmrc`, `.docker/config.json` and anything under `.ssh`, `.aws`, `.gnupg` or `.kube`. The guard lets `.example`, `.sample`, `.template` and `.dist` copies through; the `permissions.deny` example below does not. Makes Claude Code ask you before `git commit/push/merge/rebase`, force-push, `reset --hard`, commands that throw away uncommitted changes (`git checkout -- <path>`, `git restore`, `git switch -C`, `git rm -f`), recursive deletes (`rm -r`, `Remove-Item -r`, `rd /s`, `del /s`), and any `gh`/`glab` command not on its read-only list (`pr view`, `run list`, `api` with GET and no body, ...). Keeps the `reviewer` agent read-only: its Bash calls may only inspect. Blocks a `Write`, `Edit` or `MultiEdit` that puts a key, token, private key or URL password into the memory store, which is committed. |
 | Package-manager guard | Blocks the package managers the project's lockfile does not use. No lockfile, no enforcement. |
 | Format on edit | Runs Prettier and `eslint --fix` on the edited file, when the project has them. |
 | Stop checks | At the end of a turn that changed code: typecheck, lint, and the tests related to the changed files. With no `package.json`, it runs the project's Node test files (`node --test`) instead, or the commands in `checks`. Failures go back to Claude, and so does a check that runs past the time limit. A passing run is remembered in `.git/dev-kit-stop-checks`, so the checks run again only after the code, the check commands or the config (`package.json`, `tsconfig.json`, ESLint config) change. |
@@ -78,7 +78,7 @@ Every key is optional:
 ```
 
 - `guard.git`: `"ask"` (default) prompts you each time, `"deny"` blocks outright, `"off"` disables the check. Secret-file blocking stays on regardless.
-- `guard.baseBranch`: `"ask"` (default) prompts you before `Edit`, `Write` or `MultiEdit` changes a project file while you are on the base branch, and points at `/dev-kit:issue new`; `"deny"` blocks outright, `"off"` disables the check. It skips files outside the project, `.claude/`, `docs/plans/` and your `issuesDir`, which the issue flow writes on the base branch, and a repository whose base branch has no commit yet.
+- `guard.baseBranch`: `"ask"` (default) prompts you before `Edit`, `Write` or `MultiEdit` changes a project file while you are on the base branch, and points at `/dev-kit:issue new`; `"deny"` blocks outright, `"off"` disables the check. It skips files outside the project, `.claude/`, `docs/plans/` and your `issuesDir`, which the issue flow writes on the base branch, the memory store (`docs/memory.md`, `docs/memory/`), and a repository whose base branch has no commit yet.
 
 The safety guard matches patterns in the command text. It catches mistakes, not a determined reader: a secret read through `node -e` or `python -c`, a PowerShell `[IO.File]` call, a glob (`cat .en*`), a variable (`f=.env; cat $f`) or an earlier `cd` (`cd ~ && cat .npmrc`) gets past it. Two settings in the project's `.claude/settings.json` go further:
 
@@ -111,6 +111,18 @@ Print what was resolved for the current project:
 node plugins/dev-kit/hooks/kit-config.mjs
 ```
 
+## Memory
+
+Durable project facts live in the repo and are committed with the work: the index `docs/memory.md` holds one line per topic (a link and when to read it), and each topic file `docs/memory/<topic>.md` holds the facts. Claude writes them under the working rules, SessionStart loads the index, and Claude reads a topic file before working on its topic. `handoff` keeps the per-branch notes.
+
+The store replaces Claude Code's native auto-memory. Turn that off in each project that uses the kit, in `.claude/settings.json`:
+
+```json
+{ "autoMemoryEnabled": false }
+```
+
+The kit does not set or check this: in a project without it, both memories run.
+
 ## Conventions the workflow assumes
 
 Branches are named `<type>/<slug>` (`feat/login`), commits `<type>(#12): summary`, and PRs `[#12] Title` with `Closes #12`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`.
@@ -127,9 +139,9 @@ Project-specific tooling is not here: GitLab mirroring, framework doc lookups an
 node --test tests/hooks.test.mjs tests/inventory.test.mjs
 ```
 
-373 tests: 359 run every hook as a separate process against throwaway projects (config detection, both guards, session-start, stop-checks, format-file, notify and context-nudge, plus the `hooks.json` wiring), and 14 run `scripts/inventory.mjs` against a throwaway repo and transcript folder. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
+398 tests: 384 run every hook as a separate process against throwaway projects (config detection, both guards, session-start, stop-checks, format-file, notify and context-nudge, plus the `hooks.json` wiring), and 14 run `scripts/inventory.mjs` against a throwaway repo and transcript folder. No dependencies. CI runs this suite and `claude plugin validate --strict` on Ubuntu and Windows.
 
-Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template), `plan` (a multi-file feature, a rename that needs no plan and must not call `impact-mapper`, a change whose callers sit behind aliases in a 122-file app, the same change with the `impact-mapper` agent blocked), `handoff` (a plain note, a focus argument that must come first, a key in the conversation that must not reach the note), `ship` (a commit message for a pasted diff, with the commands printed and not run) and `review` (a boundary bug the new test misses, a correct change that looks like a bug, a bug outside the diff, a change the request did not ask for): each checks that the skill fires and that the answer follows it, except `plan-skip-trivial`, which checks that a one-sentence change gets no plan, and the `handoff` and `ship` cases, which grade the answer text only (a slash command in the prompt is not a `Skill` call). Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
+Skills are prompts, so they are checked by running them. `plugins/dev-kit/evals/` has cases for `debug` (root cause, flaky test, no reproduction), `grill` (vague request, fact the repo answers, conflicting requirements), `issue` (mode picked from a bug report, bug draft, repo issue template), `plan` (a multi-file feature, a rename that needs no plan and must not call `impact-mapper`, a change whose callers sit behind aliases in a 122-file app, the same change with the `impact-mapper` agent blocked), `handoff` (a plain note, a focus argument that must come first, a key in the conversation that must not reach the note), `ship` (a commit message for a pasted diff, with the commands printed and not run) and `review` (a boundary bug the new test misses, a correct change that looks like a bug, a bug outside the diff, a change the request did not ask for): each checks that the skill fires and that the answer follows it, except `plan-skip-trivial`, which checks that a one-sentence change gets no plan, and the `handoff` and `ship` cases, which grade the answer text only (a slash command in the prompt is not a `Skill` call). Three cases cover the memory store, which has no skill: `memory-cross-session` (a fact told in passing reaches a topic file and the index), `memory-topic-read` (the answer is only in a topic file) and `memory-secret` (a key asked to be remembered never reaches a memory write); their `tool_used` graders check the writes, since the judge sees only the final reply. Run them by hand, not in CI: every case is about six Claude runs against your own plan or API bill.
 
 ```bash
 claude plugin eval plugins/dev-kit --scaffold --allow-tools Edit Write --ablation none

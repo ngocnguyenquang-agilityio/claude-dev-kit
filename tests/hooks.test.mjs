@@ -668,8 +668,15 @@ describe("safety-guard on the base branch", () => {
     assert.match(runHook("safety-guard.mjs", project, edit("src/app.ts")).out, /"ask"/);
   });
 
-  for (const file of [".claude/settings.json", "docs/plans/2026-01-01-thing.md", "docs/issues/50-thing.md", "docs/issues/README.md"]) {
-    it(`stays silent for ${file}, the issue flow writes it on the base branch`, () => {
+  for (const file of [
+    ".claude/settings.json",
+    "docs/plans/2026-01-01-thing.md",
+    "docs/issues/50-thing.md",
+    "docs/issues/README.md",
+    "docs/memory.md",
+    "docs/memory/build.md",
+  ]) {
+    it(`stays silent for ${file}, the issue flow or the memory store writes it on the base branch`, () => {
       const project = projectOn("main", { dirs: ["docs/issues"] });
 
       assert.deepEqual(runHook("safety-guard.mjs", project, edit(file, "Write")), { code: 0, out: "", err: "" });
@@ -698,6 +705,81 @@ describe("safety-guard on the base branch", () => {
   });
 });
 
+describe("safety-guard on the memory store", () => {
+  // Built from parts so this file holds no string a secret scanner would flag.
+  const secrets = {
+    "a Stripe-style key": ["sk", "test", "EVALFAKE0123456789abcdef"].join("_"),
+    "an AWS access key id": "AKIA" + "ABCDEFGHIJKLMNOP",
+    "a GitHub token": "ghp_" + "a".repeat(36),
+    "a fine-grained GitHub token": "github_pat_" + "B".repeat(30),
+    "a Slack token": "xoxb-" + "1234567890-abcdef",
+    "a private key block": "-----BEGIN RSA " + "PRIVATE KEY-----\nMIIE\n",
+    "a URL with a password": "postgres://admin:" + "hunter2@db.example.com/app",
+  };
+  const fact = (value) => `Staging upload uses ${value}; the upload step is done.`;
+  const inputs = {
+    Write: (file, text) => ({ tool_name: "Write", tool_input: { file_path: file, content: text } }),
+    Edit: (file, text) => ({ tool_name: "Edit", tool_input: { file_path: file, old_string: "x", new_string: text } }),
+    MultiEdit: (file, text) => ({
+      tool_name: "MultiEdit",
+      tool_input: { file_path: file, edits: [{ old_string: "a", new_string: "plain" }, { old_string: "b", new_string: text }] },
+    }),
+  };
+
+  for (const [kind, value] of Object.entries(secrets)) {
+    it(`blocks ${kind} written to a topic file`, () => {
+      const result = runHook("safety-guard.mjs", makeProject(), inputs.Write("docs/memory/staging.md", fact(value)));
+
+      assert.equal(result.code, 2);
+      assert.match(result.err, /memory store/);
+    });
+  }
+
+  for (const tool of ["Write", "Edit", "MultiEdit"]) {
+    it(`blocks a key in the index through ${tool}`, () => {
+      const result = runHook("safety-guard.mjs", makeProject(), inputs[tool]("docs/memory.md", fact(secrets["a Stripe-style key"])));
+
+      assert.equal(result.code, 2);
+    });
+  }
+
+  it("blocks a key glued to a variable name", () => {
+    const text = `STRIPE_${secrets["a Stripe-style key"]}`;
+
+    assert.equal(runHook("safety-guard.mjs", makeProject(), inputs.Write("docs/memory/staging.md", text)).code, 2);
+  });
+
+  it("blocks an absolute path into the memory store", () => {
+    const project = makeProject();
+    const file = path.join(project, "docs", "memory", "staging.md");
+
+    assert.equal(runHook("safety-guard.mjs", project, inputs.Write(file, fact(secrets["a GitHub token"]))).code, 2);
+  });
+
+  for (const text of [
+    "The staging database resets every night, so never seed it by hand.",
+    fact("sk_test_<REDACTED>"),
+    fact("the key in $STRIPE_KEY"),
+    fact("postgres://admin:<REDACTED>@db.example.com/app"),
+  ]) {
+    it(`allows a fact with no secret: ${text.slice(0, 40)}`, () => {
+      assert.deepEqual(runHook("safety-guard.mjs", makeProject(), inputs.Write("docs/memory/staging.md", text)), { code: 0, out: "", err: "" });
+    });
+  }
+
+  it("leaves files outside the memory store to the other checks", () => {
+    const result = runHook("safety-guard.mjs", makeProject(), inputs.Write("docs/memory-notes.md", fact(secrets["a Stripe-style key"])));
+
+    assert.deepEqual(result, { code: 0, out: "", err: "" });
+  });
+
+  it("blocks even when guard.git and guard.baseBranch are off", () => {
+    const project = makeProject({ ".claude/kit.json": { guard: { git: "off", baseBranch: "off" } } });
+
+    assert.equal(runHook("safety-guard.mjs", project, inputs.Write("docs/memory/staging.md", fact(secrets["a Slack token"]))).code, 2);
+  });
+});
+
 describe("session-start", () => {
   it("prints the rules and the project context", () => {
     const project = makeProject({ "package.json": { scripts: { test: "x" } }, "pnpm-lock.yaml": "" }, { git: true });
@@ -708,6 +790,49 @@ describe("session-start", () => {
     assert.match(out, /dev-kit working rules/);
     assert.match(out, /Package manager: pnpm/);
     assert.match(out, /pnpm run test/);
+  });
+
+  it("includes the memory index", () => {
+    const project = makeProject({ "docs/memory.md": "- [Staging](memory/staging.md): read before touching staging data." }, { git: true });
+
+    const { code, out } = runHook("session-start.mjs", project);
+
+    assert.equal(code, 0);
+    assert.match(out, /## Project memory \(docs\/memory\.md\)\n- \[Staging\]\(memory\/staging\.md\)/);
+  });
+
+  it("prints no memory section when there is no index or it is empty", () => {
+    assert.doesNotMatch(runHook("session-start.mjs", makeProject({}, { git: true })).out, /Project memory/);
+    assert.doesNotMatch(runHook("session-start.mjs", makeProject({ "docs/memory.md": "\n" }, { git: true })).out, /Project memory/);
+  });
+
+  // Output past 10000 characters is cut, so a long index must not push the
+  // project context, and the handoff note inside it, out.
+  it("prints the memory index after the project context", () => {
+    const project = makeProject({ "docs/memory.md": "- [Build](memory/build.md): read before changing CI." }, { git: true });
+
+    const { out } = runHook("session-start.mjs", project);
+
+    assert.ok(out.indexOf("dev-kit project context") < out.indexOf("Project memory"));
+  });
+
+  it("asks to prune the memory index only once it passes 6000 characters", () => {
+    const sized = (length) => makeProject({ "docs/memory.md": "x".repeat(length) }, { git: true });
+
+    assert.doesNotMatch(runHook("session-start.mjs", sized(6000)).out, /merge or prune/);
+    assert.match(runHook("session-start.mjs", sized(6001)).out, /memory index is 6001 characters; merge or prune/);
+  });
+
+  it("keeps the memory index when sessionStart.context is false", () => {
+    const project = makeProject(
+      { ".claude/kit.json": { sessionStart: { context: false } }, "docs/memory.md": "- [Build](memory/build.md): read before changing CI." },
+      { git: true },
+    );
+
+    const { out } = runHook("session-start.mjs", project);
+
+    assert.match(out, /Project memory/);
+    assert.doesNotMatch(out, /dev-kit project context/);
   });
 
   it("includes this branch's handoff note", () => {
