@@ -10,7 +10,7 @@ One user: the repo owner. There is no support for other teams, other stacks or s
 
 ## Pillars
 
-1. **Quality workflow**: clarify, plan, debug, review and ship in small verified steps.
+1. **Quality workflow**: clarify, plan, debug, review and ship in small verified steps. Decisions (grill, plan, checks) run on the model you chose for the session; the steps of an approved plan run on Sonnet in the `implementer` agent, and the main session checks each one.
 2. **Session memory**: what one session learned reaches the next. `handoff` keeps the per-branch notes; the kit's memory store (`docs/memory.md` and `docs/memory/`) keeps durable project facts and replaces Claude Code's native auto-memory.
 3. **Safety guard**: a base layer that blocks or asks before risky actions. It stays as it is and is not extended, except for the one check named under Not in scope.
 
@@ -19,7 +19,7 @@ One user: the repo owner. There is no support for other teams, other stacks or s
 Quality workflow:
 
 - Skills: `grill`, `plan`, `debug`, `review`, `issue`, `ship`
-- Agents: `impact-mapper`, `reviewer`
+- Agents: `impact-mapper`, `reviewer`, `implementer`
 - Hooks: Format on edit, Stop checks, Notify (tells you when Claude finishes or waits, so a prompt is not missed)
 
 Session memory:

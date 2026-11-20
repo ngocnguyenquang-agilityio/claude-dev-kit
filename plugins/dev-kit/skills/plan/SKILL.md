@@ -29,4 +29,14 @@ Turn the request into an ordered list of small steps. Each step must be independ
 
 Write the plan to `docs/plans/YYYY-MM-DD-<slug>.md` and give its path, so `handoff` and a later session can pick it up. When the work has an issue, link the plan from the issue file. The plan file is committed with the work, like the issue file.
 
-Show the whole plan in chat as the file has it, goal and every Done when included, not a summary: the user approves what they read. Then wait for their yes before implementing. After that, work one step at a time: move on only when the step's check gives its expected result.
+Show the whole plan in chat as the file has it, goal and every Done when included, not a summary: the user approves what they read. Then wait for their yes before implementing.
+
+## Implement
+
+After the yes, take the steps in order. Do not edit a step's files yourself: the steps run on Sonnet so this session's model is spent on decisions and checks. A step that changes no files, such as the final checks or review step, runs in this session.
+
+1. Spawn the `implementer` agent (`subagent_type: "dev-kit:implementer"`) with the step's What and Done when, and the plan file path.
+2. Read its report. If it is a question, answer it from the plan and spawn the agent again with the answer, or ask the user when the plan does not settle it; this is not the retry. Otherwise run the step's Done when check yourself. Move on only when it gives the expected result.
+3. If the check fails, spawn the agent once more with the same step and the failing output. If it fails again, stop: report the step, the output and what both attempts tried, and wait for the user.
+
+If the agent cannot be spawned, say so and ask the user before doing the steps in this session.
