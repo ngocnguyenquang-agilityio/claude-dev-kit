@@ -1,7 +1,7 @@
 // SessionStart: a plugin cannot ship CLAUDE.md rules, so put the working rules
 // and the project context into the session instead. Whatever this prints is
 // added to Claude's context. Turn the project context off with `sessionStart.context`
-// in .claude/kit.json; the rules always print.
+// in .claude/kit.json; the rules and the memory index always print.
 import fs from "node:fs";
 import path from "node:path";
 import { baseRef, detectBaseBranch, issuesFromCommits, loadConfig, projectDir, run, scriptCommand } from "./lib.mjs";
@@ -40,6 +40,21 @@ if (config.sessionStart.context) {
     }
   }
   sections.push(lines.join("\n"));
+}
+
+// Claude Code cuts hook output at 10000 characters and Claude does not read the
+// rest. The index goes last, so a cut loses the end of the index rather than
+// the handoff note, and the prune line comes well before that.
+const MEMORY_INDEX = "docs/memory.md";
+const MEMORY_WARN_CHARACTERS = 6000;
+const memoryPath = path.join(projectDir, MEMORY_INDEX);
+const index = fs.existsSync(memoryPath) ? fs.readFileSync(memoryPath, "utf8").trim() : "";
+if (index) {
+  const warning =
+    index.length > MEMORY_WARN_CHARACTERS
+      ? [`> The memory index is ${index.length} characters; merge or prune topics to keep it under ${MEMORY_WARN_CHARACTERS} (output past 10000 is cut).`, ""]
+      : [];
+  sections.push([`## Project memory (${MEMORY_INDEX})`, ...warning, index].join("\n"));
 }
 
 // The sha from the note's `HEAD <sha>` State line. Only hex passes: the note is

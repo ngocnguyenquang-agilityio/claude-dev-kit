@@ -9,6 +9,9 @@
 //    guard.baseBranch in .claude/kit.json to "deny" or "off" like guard.git.
 //  - The reviewer agent may run only commands that inspect: anything else is
 //    blocked, so it stays read-only whatever its prompt says.
+//  - Write, Edit and MultiEdit text bound for the memory store (docs/memory.md,
+//    docs/memory/) is matched against known key and token shapes: blocked. A
+//    shell write into the store (`echo ... >> docs/memory/x.md`) is not checked.
 // Exit code 2 blocks the call and sends stderr to Claude. A JSON "ask" decision
 // on stdout shows the user a permission prompt.
 // This is pattern matching on the command text, a guard against mistakes, not
@@ -40,6 +43,18 @@ const SECRET_SUFFIX = /(^|\/)\.docker\/config\.json$/;
 // holds settings Claude may need to edit.
 const HOME_PREFIX = /^(~|\$home|\$\{home\}|\$env:(home|userprofile)|\$\{env:(home|userprofile)\}|%userprofile%)\//;
 const HOME_NPMRC = toSlashes(path.join(os.homedir(), ".npmrc"));
+
+// Values that grant access, found in text written to the memory store. A
+// placeholder such as `sk_test_<REDACTED>` or `user:$PASSWORD@` does not match.
+const SECRET_CONTENT = [
+  /(?<![A-Za-z0-9])[spr]k_(live|test)_[A-Za-z0-9]{8,}/,
+  /\bAKIA[0-9A-Z]{16}\b/,
+  /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}/,
+  /\bgithub_pat_[A-Za-z0-9_]{20,}/,
+  /\bxox[abpr]-[A-Za-z0-9-]{10,}/,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+  /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:[^\s@/<$*][^\s@/]*@/i,
+];
 
 function toSlashes(raw) {
   return raw.replace(/\\/g, "/").toLowerCase();
@@ -310,13 +325,34 @@ function reviewerMayRun(command, config) {
 
 const EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit"]);
 
+// `file` relative to the project with forward slashes, or null when it lies
+// outside the project.
+function projectRelative(file, baseDir) {
+  const relative = toSlashes(path.relative(projectDir, path.resolve(baseDir, file)));
+  return relative === ".." || relative.startsWith("../") || path.isAbsolute(relative) ? null : relative;
+}
+
+function isMemoryStore(relative) {
+  return relative === "docs/memory.md" || relative.startsWith("docs/memory/");
+}
+
+// The memory store is committed, so a key written there would reach git.
+function writesSecretToMemory(toolName, toolInput, baseDir) {
+  const file = toolInput.file_path ?? toolInput.path;
+  const relative = EDIT_TOOLS.has(toolName) && file ? projectRelative(file, baseDir) : null;
+  if (relative === null || !isMemoryStore(relative)) return false;
+  const texts = [toolInput.content, toolInput.new_string, ...(toolInput.edits ?? []).map((edit) => edit?.new_string)];
+  return texts.some((text) => typeof text === "string" && SECRET_CONTENT.some((pattern) => pattern.test(text)));
+}
+
 // The base branch's name when `file` is project work done on it, else null.
 // `issue new` writes the issue file and `issue start` carries the plan file
-// onto the branch, so those, and .claude/, are not project work. A repo whose
-// base branch has no commit yet is a new project: nothing to branch from.
+// onto the branch, so those, .claude/ and the memory store, which Claude writes
+// whenever it learns a fact, are not project work. A repo whose base branch has
+// no commit yet is a new project: nothing to branch from.
 function baseBranchOfEdit(file, baseDir, config) {
-  const relative = toSlashes(path.relative(projectDir, path.resolve(baseDir, file)));
-  if (relative === ".." || relative.startsWith("../") || path.isAbsolute(relative)) return null;
+  const relative = projectRelative(file, baseDir);
+  if (relative === null || isMemoryStore(relative)) return null;
   const issueFlowPaths = [".claude/", "docs/plans/", config.issuesDir && `${toSlashes(config.issuesDir)}/`];
   if (issueFlowPaths.some((prefix) => prefix && relative.startsWith(prefix))) return null;
 
@@ -356,6 +392,13 @@ const blockedSecret = shellTool ? readsSecret(toolInput.command ?? "", shellDir)
 if (blockedSecret) {
   console.error(
     "Blocked: this touches a secret file (.env*, key, credential or ~/.ssh). Ask the user for the names of the variables you need, or for a redacted copy, instead of reading the file.",
+  );
+  process.exit(2);
+}
+
+if (!shellTool && writesSecretToMemory(input?.tool_name, toolInput, shellDir)) {
+  console.error(
+    "Blocked: this writes a key, token, private key or password into the memory store (docs/memory.md, docs/memory/), which is committed. Write the fact without the value, for example `sk_test_<REDACTED>` or the name of the variable that holds it.",
   );
   process.exit(2);
 }

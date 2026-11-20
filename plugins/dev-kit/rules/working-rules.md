@@ -34,6 +34,12 @@
 - When the change is to the dev-kit plugin itself, it must serve code quality, session memory or safety, and come with an eval.
 - When the change is to the dev-kit plugin itself, `docs/vision.md` says what is out of scope.
 
+**Memory**
+- When you learn a durable project fact (a decision, a gotcha, a correction from the user), write it to `docs/memory/<topic>.md` and keep one line per topic in the index `docs/memory.md`: a link and when to read it. Branch state belongs in `handoff`, not here.
+- Before working on a topic the index lists, read its topic file.
+- Split a topic file in two once it passes about 150 lines.
+- Never write secrets, tokens or personal data to memory; write the fact without the value.
+
 **Security**
 - Do not read or print `.env*`, `*.pem`, `~/.ssh`, credential files or `node_modules`.
 - Redact secrets in logs, handoffs and any output you write. Never hardcode secrets; use environment variables and say which are needed.
