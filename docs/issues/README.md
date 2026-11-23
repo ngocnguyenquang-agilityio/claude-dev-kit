@@ -13,13 +13,13 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 28 | [Handoff skill: stale-note check, expiry and a stricter note format](28-handoff-skill-best-practices.md) | closed | none |
 | 30 | [Issue skill: one-level references, evals, better drafts and repo issue templates](30-issue-skill-best-practices.md) | closed | none |
 | 32 | [Ship and review skills: load config as a step so evals can load them](32-ship-review-config-step.md) | closed | #30 |
-| 34 | [Handoff, pr-followup and release: load config as a step so evals can load them](34-handoff-pr-followup-release-config-step.md) | open | #32 |
+| 34 | [Handoff, pr-followup and release: load config as a step so evals can load them](34-handoff-pr-followup-release-config-step.md) | closed | #32 |
 | 35 | [Plan skill: approval gate, out of scope, saved plans and stricter checks](35-plan-skill-best-practices.md) | closed | none |
 | 37 | [Review skill: verified findings, scoped rules, scope decisions and behavior evals](37-review-skill-best-practices.md) | closed | none |
 | 39 | [Add a read-only impact-mapper agent that plan calls at step 2](39-impact-mapper-agent.md) | closed | none |
 | 43 | [Impact-mapper follow-ups: stricter eval criteria, fallback check and a real-project trial](43-impact-mapper-followups.md) | closed | none |
 | 45 | [Focus the kit on its purpose](45-focus-kit-scope.md) | closed | none |
-| 47 | [Handoff skill: behavior evals and a Next-items rule](47-handoff-evals.md) | open | none |
+| 47 | [Handoff skill: behavior evals and a Next-items rule](47-handoff-evals.md) | closed | none |
 | 49 | [Safety guard: ask before editing files on the base branch](49-base-branch-edit-guard.md) | closed | none |
 | 51 | [Stop checks: run without package.json, re-run on config edits, report timeouts](51-stop-checks-reliability.md) | closed | none |
 | 53 | [Context nudge: suggest handoff when a session gets long](53-context-nudge.md) | closed | none |
@@ -29,5 +29,6 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 61 | [Kit-owned memory store: an indexed docs/memory/ with a secret guard](61-memory-store.md) | closed | none |
 | 63 | [Plan skill: run approved steps on Sonnet through an implementer agent](63-plan-implementer-agent.md) | closed | none |
 | 65 | [Reviewer agent: evals that check it is spawned, and a pasted-diff case](65-reviewer-evals.md) | closed | none |
+| 67 | [Docs: sync issue index and roadmap status with GitHub](67-sync-status-docs.md) | closed | none |
 
-Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63 and 65 are independent of them and of each other.
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65 and 67 are independent of them and of each other.
