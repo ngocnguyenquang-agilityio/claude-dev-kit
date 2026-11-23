@@ -51,7 +51,7 @@ Before every minor release, run an inventory: how often each component was used,
 
 In this order:
 
-1. **A11**: stop checks work without `package.json`. Done when they run on this repo and report real results.
+1. **A11**: stop checks work without `package.json`. Done when they run on this repo and report real results. Done in #51.
 2. **A7**: the rules in `~/.claude/rules` move into the kit so one source remains. Done when `~/.claude/rules` holds no rule that the kit also holds.
 3. **Evals for `handoff` and `ship`**: Done when each skill has one eval that passes 3 of 3 runs. Done in #47 and #55: `handoff-basic` and `ship-commit`.
-4. **Kit-owned memory store**: only after items 1 to 3, with an eval, and after finding how to turn off native auto-memory. Done when one eval shows a fact written in one session is used in the next, and native auto-memory is off. In progress in #61.
+4. **Kit-owned memory store**: only after items 1 to 3, with an eval, and after finding how to turn off native auto-memory. Done when one eval shows a fact written in one session is used in the next, and native auto-memory is off. Done in #61.
