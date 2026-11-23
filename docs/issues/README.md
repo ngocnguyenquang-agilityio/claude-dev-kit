@@ -30,5 +30,6 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 63 | [Plan skill: run approved steps on Sonnet through an implementer agent](63-plan-implementer-agent.md) | closed | none |
 | 65 | [Reviewer agent: evals that check it is spawned, and a pasted-diff case](65-reviewer-evals.md) | closed | none |
 | 67 | [Docs: sync issue index and roadmap status with GitHub](67-sync-status-docs.md) | closed | none |
+| 69 | [Issue start: route multi-file issues through plan so steps run in the implementer](69-issue-start-plan.md) | closed | none |
 
-Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65 and 67 are independent of them and of each other.
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67 and 69 are independent of them and of each other.

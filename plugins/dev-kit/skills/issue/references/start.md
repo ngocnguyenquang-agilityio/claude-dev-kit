@@ -8,7 +8,10 @@ Start issue `#$ARGUMENTS`. Each step ends when its check holds. `baseBranch` and
    - Run `gh issue view <N>`.
    - If `issuesDir` is set, also read the issue file. If the two disagree, the GitHub issue wins. Tell the user about the difference.
 4. **Branch.** Pick the type from the issue's main purpose: `feat`, `fix`, `chore`, `docs`, `test` or `refactor` (`feat` when unsure). Pick a 2-4 word kebab-case slug from the issue title. Then run `git checkout -b <type>/<slug>`. Done when `git branch --show-current` prints that name. The branch name carries no number: the first commit, `<type>(#N): <summary>`, records the issue for the branch.
-5. **Plan.** Turn every unchecked `[ ]` task (or, with no task list, every requirement in the issue body) into a task-list step. Name the acceptance criteria that will prove the issue done.
+5. **Plan.** Pick the first case that fits:
+   - The issue file links a plan under `docs/plans/`: show that plan. After the user's yes, load the `plan` skill and follow its Implement section, so each step runs in `dev-kit:implementer`.
+   - The issue changes 3 or more files or needs several dependent steps, unless the whole change is one mechanical edit repeated across files, such as a rename: run the `plan` skill with the issue's tasks, its acceptance criteria and the issue file path.
+   - Otherwise: turn every unchecked `[ ]` task (or, with no task list, every requirement in the issue body) into a task-list step. Name the acceptance criteria that will prove the issue done.
 6. **Framework context.** If a task touches an API from a framework whose docs the project bundles or whose version is newer than you know, read those docs before writing code.
 
-Finish by telling the user the branch name, the type you chose and why, the issue number `#N` (so the first commit and a `handoff` note can carry it), and the plan. Then wait for a go-ahead before implementing.
+Finish by telling the user the branch name, the type you chose and why, the issue number `#N` (so the first commit and a `handoff` note can carry it), and the plan. Then wait for a go-ahead before implementing. If step 5 showed a plan, a linked one or one `plan` wrote, the user's yes to it is that go-ahead: ask once, not twice.
