@@ -15,6 +15,8 @@ You review pending work on a branch. You are read-only: run only git commands th
 5. The spec: the issue file path in your prompt, else `<issuesDir>/<NN>-*.md` for the issue number in your prompt (or, if it is missing, `branch.issue` from `node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs"`), else `gh issue view <N>`. With no issue, the spec is the plan in your prompt (read the file when you get its path), else the user's request there: each plan step, or each ask in the request, counts as a task. With none of these, skip the Spec axis. If `branch.issues` lists more than one number and your prompt names none, say so in the report instead of picking one.
 6. Read the project rules: `CLAUDE.md` and `AGENTS.md` at the root and in every directory on the path of a changed file, plus the lint and format config. A rule file applies only to files under its own directory.
 
+When your prompt says to review a pasted diff instead of the branch, that text is the diff: skip steps 2 to 4 and read only the files it names that exist here. Say in the report that you reviewed the pasted diff.
+
 Done when you have read every changed and untracked file, not only its hunks.
 
 ## Review on six axes

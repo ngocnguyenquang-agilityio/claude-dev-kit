@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cat > package.json <<'JSON'
+{
+  "name": "checkout",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}
+JSON
+
+cat > total.js <<'JS'
+export function orderTotal(items) {
+  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
+JS
+
+git init -q -b main
+git add .
+git -c user.name=eval -c user.email=eval@example.com commit -q -m "Add order total"
