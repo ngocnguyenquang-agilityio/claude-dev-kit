@@ -28,5 +28,6 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 59 | [Re-run the grill baseline and tighten grill-pushback](59-grill-baseline.md) | closed | none |
 | 61 | [Kit-owned memory store: an indexed docs/memory/ with a secret guard](61-memory-store.md) | closed | none |
 | 63 | [Plan skill: run approved steps on Sonnet through an implementer agent](63-plan-implementer-agent.md) | closed | none |
+| 65 | [Reviewer agent: evals that check it is spawned, and a pasted-diff case](65-reviewer-evals.md) | closed | none |
 
-Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61 and 63 are independent of them and of each other.
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63 and 65 are independent of them and of each other.

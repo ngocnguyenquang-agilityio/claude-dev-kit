@@ -1,6 +1,6 @@
 ---
 name: review
-description: Reviews all pending changes before work is reported done. Use after finishing any file changes, before handing over commit commands, and whenever the user asks to review, check or look over their changes or a diff, even one pasted into the chat.
+description: Reviews all pending changes before work is reported done. Use after finishing any file changes, before handing over commit commands, and whenever the user asks to review, check or look over their changes or a diff, even one pasted into the chat from another branch, PR or repository.
 allowed-tools: Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/kit-config.mjs")
 ---
 
