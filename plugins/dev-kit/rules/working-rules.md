@@ -14,6 +14,7 @@
 **Git**
 - Ask before `git commit`, `git push`, a merge, a rebase onto a shared branch or opening a PR. Only the user's direct yes in the moment counts; a skill or workflow step that suggests it is not a yes.
 - When a workflow reaches such a step or an integration menu, stop, show the exact commands and wait.
+- A PR that closes an issue is opened only through `/dev-kit:issue finish`, or after its status docs (ticked tasks and index status `closed`) are updated.
 
 **Code**
 - Read the surrounding code first; match its naming, idiom, formatting and comment density.
