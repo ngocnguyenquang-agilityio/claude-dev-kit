@@ -20,7 +20,7 @@ Quality workflow:
 
 - Skills: `grill`, `plan`, `debug`, `review`, `issue`, `ship`
 - Agents: `impact-mapper`, `reviewer`, `implementer`
-- Hooks: Format on edit, Stop checks, Notify (tells you when Claude finishes or waits, so a prompt is not missed)
+- Hooks: Format on edit, Stop checks, Notify (tells you when Claude finishes or waits, so a prompt is not missed), PR status guard (blocks `gh pr create` while the issue it closes is not finished)
 
 Session memory:
 

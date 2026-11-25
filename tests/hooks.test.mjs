@@ -1388,6 +1388,111 @@ describe("context-nudge", () => {
   });
 });
 
+describe("pr-status-guard", () => {
+  const indexRow = (n, status) => `| ${n} | [Title](${n}-slug.md) | ${status} | none |`;
+  const index = (...rows) => `# Issues\n\n| # | Title | Status | Blocked by |\n|---|---|---|---|\n${rows.join("\n")}\n`;
+  const issue = (...tasks) => `# Title\n\n## Tasks\n\n${tasks.join("\n")}\n`;
+  const withIssues = (files, project = makeProject({ "package.json": {} })) => {
+    for (const [name, content] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(project, name)), { recursive: true });
+      fs.writeFileSync(path.join(project, name), content);
+    }
+    return project;
+  };
+  const guard = (project, command) => runHook("pr-status-guard.mjs", project, bash(command));
+  const create = (body) => `gh pr create --title "T" --body "${body}"`;
+  const done = () => ({
+    "docs/issues/README.md": index(indexRow(75, "closed")),
+    "docs/issues/75-slug.md": issue("- [x] one", "- [x] two"),
+  });
+
+  it("allows a PR for an issue that is closed with every task ticked", () => {
+    assert.equal(guard(withIssues(done()), create("Closes #75")).code, 0);
+  });
+
+  it("allows a PR that names no issue", () => {
+    assert.equal(guard(withIssues({ "docs/issues/README.md": index(indexRow(75, "open")) }), create("Just a fix")).code, 0);
+  });
+
+  it("allows Refs and Part of for an open issue", () => {
+    const project = withIssues({ "docs/issues/README.md": index(indexRow(75, "open")) });
+    assert.equal(guard(project, create("Refs #75")).code, 0);
+    assert.equal(guard(project, create("Part of #75")).code, 0);
+  });
+
+  it("allows any PR when the project has no issues folder", () => {
+    assert.equal(guard(makeProject({ "package.json": {} }), create("Closes #75")).code, 0);
+  });
+
+  it("ignores commands that are not gh pr create", () => {
+    const project = withIssues({ "docs/issues/README.md": index(indexRow(75, "open")) });
+    assert.equal(guard(project, "gh pr view 75 --comments Closes #75").code, 0);
+    assert.equal(guard(project, 'git commit -m "gh pr create Closes #75"').code, 0);
+  });
+
+  it("denies a PR whose issue is still open", () => {
+    const project = withIssues({ "docs/issues/README.md": index(indexRow(75, "open")) });
+    const result = guard(project, create("Closes #75"));
+    assert.equal(result.code, 2);
+    assert.match(result.err, /#75's status in docs\/issues\/README\.md is `open`, not `closed`/);
+    assert.match(result.err, /Run \/dev-kit:issue finish before opening the PR\.$/);
+  });
+
+  it("denies a PR whose issue file has an unticked task", () => {
+    const project = withIssues({
+      ...done(),
+      "docs/issues/75-slug.md": issue("- [x] one", "- [ ] two"),
+    });
+    const result = guard(project, create("fixes #75"));
+    assert.equal(result.code, 2);
+    assert.match(result.err, /75-slug\.md has 1 unticked task\(s\)/);
+  });
+
+  it("counts only task lines as unticked, not a quoted `- [ ]`", () => {
+    const project = withIssues({
+      ...done(),
+      "docs/issues/75-slug.md": issue("- [x] deny when the file has an unticked `- [ ]` task", "Write `- [ ] task` for a task."),
+    });
+    assert.equal(guard(project, create("Closes #75")).code, 0);
+  });
+
+  it("denies a PR whose issue has no index row", () => {
+    const project = withIssues({ "docs/issues/README.md": index(indexRow(12, "closed")) });
+    const result = guard(project, create("Resolves #75"));
+    assert.equal(result.code, 2);
+    assert.match(result.err, /no row for #75 in docs\/issues\/README\.md/);
+  });
+
+  it("denies when any one of several closed issues is not done", () => {
+    const project = withIssues({ "docs/issues/README.md": index(indexRow(75, "closed"), indexRow(76, "open")) });
+    assert.equal(guard(project, create("Closes #75, closes #76")).code, 2);
+  });
+
+  it("reads the number from --body-file", () => {
+    const project = withIssues({
+      "docs/issues/README.md": index(indexRow(75, "open")),
+      "body.md": "Closes #75\n",
+    });
+    assert.equal(guard(project, "gh pr create --title T --body-file body.md").code, 2);
+    assert.equal(guard(project, "gh pr create --title T -F body.md").code, 2);
+    assert.equal(guard(project, "gh pr create --title T --body-file=body.md").code, 2);
+    assert.equal(guard(project, "gh pr create --title T --body-file missing.md").code, 0);
+  });
+
+  it("reads the number from the branch commits", () => {
+    const project = withIssues({ "docs/issues/README.md": index(indexRow(75, "open")) }, branchWithCommits("feat/x", ["feat(#75): add"]));
+    assert.equal(guard(project, "gh pr create --fill").code, 2);
+    withIssues(done(), project);
+    assert.equal(guard(project, "gh pr create --fill").code, 0);
+  });
+
+  it("guards PowerShell calls too", () => {
+    const project = withIssues({ "docs/issues/README.md": index(indexRow(75, "open")) });
+    const input = { tool_name: "PowerShell", tool_input: { command: 'gh pr create --title T --body @"\nCloses #75\n"@' } };
+    assert.equal(runHook("pr-status-guard.mjs", project, input).code, 2);
+  });
+});
+
 describe("hooks.json", () => {
   const { hooks } = JSON.parse(fs.readFileSync(path.join(hooksDir, "hooks.json"), "utf8"));
   const handlers = (event) => hooks[event].flatMap((group) => group.hooks);
@@ -1406,6 +1511,12 @@ describe("hooks.json", () => {
     const guard = handlers("PreToolUse").find((handler) => script(handler) === "safety-guard.mjs");
 
     assert.equal(guard.onFailure, "block");
+  });
+
+  it("registers pr-status-guard on PreToolUse for Bash and PowerShell", () => {
+    const group = hooks.PreToolUse.find((entry) => entry.hooks.some((handler) => script(handler) === "pr-status-guard.mjs"));
+
+    assert.equal(group?.matcher, "Bash|PowerShell");
   });
 
   it("runs context-nudge on UserPromptSubmit", () => {
