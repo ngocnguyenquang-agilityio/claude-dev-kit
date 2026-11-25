@@ -34,6 +34,6 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 72 | [Grill: propose ordered vertical-slice issues when the settled scope is bigger than one issue](72-grill-proposed-issues.md) | closed | none |
 | 73 | Issue new: draft a list of issues in full, review once, then file them in dependency order (not planned) | closed | #72 |
 | 75 | [PR status guard: block gh pr create while the closed issue's status docs are not updated](75-pr-status-guard.md) | closed | none |
-| 76 | [Ship pr and working rules: stop before a PR whose issue's status docs are not updated](76-ship-pr-status-docs.md) | open | none |
+| 76 | [Ship pr and working rules: stop before a PR whose issue's status docs are not updated](76-ship-pr-status-docs.md) | closed | none |
 
 Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67 and 69 are independent of them and of each other. Next: 75 → 76. 75 blocks `gh pr create` in a hook, so 76's own PR is already checked by it; 76 makes `ship pr` and the working rules stop first.

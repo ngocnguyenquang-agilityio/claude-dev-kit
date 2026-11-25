@@ -4,12 +4,14 @@
 
 Pillar 1 (quality workflow). Step 4 of `ship/references/pr.md` only suggests `/dev-kit:issue finish` when the status docs are untouched, and the working rules say nothing about status docs before a PR; on #72 both were passed over. Make `pr.md` stop instead of suggest, and add one working rule, so the common path is right the first time and the PR status guard hook rarely has to block.
 
+Plan: [docs/plans/2026-11-25-ship-pr-status-docs.md](../plans/2026-11-25-ship-pr-status-docs.md)
+
 ## Tasks
 
-- [ ] `plugins/dev-kit/skills/ship/references/pr.md` step 4: when the issue's status docs (its ticked tasks and its index status cell `closed`) are not updated, stop, name what is missing and tell the user to run `/dev-kit:issue finish`; print no title or body. Keep the existing exception for a run from `issue finish`
-- [ ] `plugins/dev-kit/rules/working-rules.md` **Git**: one line saying a PR that closes an issue is opened only through `/dev-kit:issue finish`, or after its status docs (ticked tasks and index status `closed`) are updated
-- [ ] New eval `plugins/dev-kit/evals/ship-pr-status-docs`: a fixture branch whose issue file has an unticked task and an index row still `open`; the prompt asks for `/dev-kit:ship pr`. `llm` grader: the reply stops, names the missing status docs and points to `issue finish`, with no PR title or body
-- [ ] `README.md` (evals paragraph) and `CHANGELOG.md` under Unreleased
+- [x] `plugins/dev-kit/skills/ship/references/pr.md` step 4: when the issue's status docs (its ticked tasks and its index status cell `closed`) are not updated, stop, name what is missing and tell the user to run `/dev-kit:issue finish`; print no title or body. Keep the existing exception for a run from `issue finish`
+- [x] `plugins/dev-kit/rules/working-rules.md` **Git**: one line saying a PR that closes an issue is opened only through `/dev-kit:issue finish`, or after its status docs (ticked tasks and index status `closed`) are updated
+- [x] New eval `plugins/dev-kit/evals/ship-pr-status-docs`: a fixture branch whose issue file has an unticked task and an index row still `open`; the prompt asks for `/dev-kit:ship pr`. `llm` grader: the reply stops, names the missing status docs and points to `issue finish`, with no PR title or body
+- [x] `README.md` (evals paragraph) and `CHANGELOG.md` under Unreleased
 
 ## Acceptance criteria
 
