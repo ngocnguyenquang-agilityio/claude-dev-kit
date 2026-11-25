@@ -31,7 +31,9 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 65 | [Reviewer agent: evals that check it is spawned, and a pasted-diff case](65-reviewer-evals.md) | closed | none |
 | 67 | [Docs: sync issue index and roadmap status with GitHub](67-sync-status-docs.md) | closed | none |
 | 69 | [Issue start: route multi-file issues through plan so steps run in the implementer](69-issue-start-plan.md) | closed | none |
-| 72 | [Grill: propose ordered vertical-slice issues when the settled scope is bigger than one issue](72-grill-proposed-issues.md) | open | none |
-| 73 | [Issue new: draft a list of issues in full, review once, then file them in dependency order](73-issue-new-list.md) | open | #72 |
+| 72 | [Grill: propose ordered vertical-slice issues when the settled scope is bigger than one issue](72-grill-proposed-issues.md) | closed | none |
+| 73 | Issue new: draft a list of issues in full, review once, then file them in dependency order (not planned) | closed | #72 |
+| 75 | [PR status guard: block gh pr create while the closed issue's status docs are not updated](75-pr-status-guard.md) | closed | none |
+| 76 | [Ship pr and working rules: stop before a PR whose issue's status docs are not updated](76-ship-pr-status-docs.md) | open | none |
 
-Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 72 → 73: 73 files the list that 72 makes grill propose. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67 and 69 are independent of them and of each other.
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67 and 69 are independent of them and of each other. Next: 75 → 76. 75 blocks `gh pr create` in a hook, so 76's own PR is already checked by it; 76 makes `ship pr` and the working rules stop first.
