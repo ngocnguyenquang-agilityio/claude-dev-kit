@@ -1,6 +1,6 @@
 ---
 name: grill
-description: Interviews the user to settle decisions before acting. Use when the user says "grill", "interview me", "stress-test" or "challenge my plan", or when the request is vague, broad or leaves key decisions open.
+description: Interviews the user to settle decisions before acting. Use when the user says "grill", "interview me", "stress-test" or "challenge my plan", asks to split an idea or project into issues, or when the request is vague, broad or leaves key decisions open.
 ---
 
 # Grill
@@ -31,6 +31,7 @@ Summarize in chat:
 - **Assumptions**: defaults you chose, so the user can overturn them.
 - **Out of scope**: what was explicitly left out.
 - **Open risks**: conflicts the user chose to keep, and anything still unknown.
+- **Proposed issues**: write only when the settled scope holds two or more parts that each merge, deliver value and can be checked on their own. Signal: the Goal needs "and" to join two outcomes. List them in dependency order; each item has a `[N]` label, a title, a one-sentence goal and `Depends on` (`[N]` labels or `none`). Cut vertical slices. Give each such part its own item: do not merge two parts that each ship alone into one item. A technical layer is an item only when it is checked and useful alone (a shared library with its own tests, a migration several features need). A scope without two such parts gets no such section.
 
 End with one question: "Is this right?" Do not act until the user confirms.
 
