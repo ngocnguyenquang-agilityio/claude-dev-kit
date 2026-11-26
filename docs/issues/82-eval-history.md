@@ -6,10 +6,10 @@ Pillar 1 (quality workflow). Eval results live only as prose in `CHANGELOG.md` (
 
 ## Tasks
 
-- [ ] `scripts/eval-history.mjs record <report.json>`: append one line per case to `docs/evals/history.jsonl` with the date, commit, case, runs, passes, judge and ablation
-- [ ] `scripts/eval-history.mjs compare [--base <ref>]`: per case, the pass rate of the latest record at the base against the newest record, plus all runs pooled per case
-- [ ] Tests in `tests/eval-history.test.mjs` with a report-shaped fixture; add the file to the test command in `.github/workflows/ci.yml`
-- [ ] `README.md` (evals paragraph) and `docs/memory/skill-evals.md`: record results with the script; `CHANGELOG.md` under Unreleased
+- [x] `scripts/eval-history.mjs record <report.json>`: append one line per case to `docs/evals/history.jsonl` with the date, commit, case, runs, passes, judge and ablation
+- [x] `scripts/eval-history.mjs compare [--base <ref>]`: per case, the pass rate of the latest record at the base against the newest record, plus all runs pooled per case
+- [x] Tests in `tests/eval-history.test.mjs` with a report-shaped fixture; add the file to the test command in `.github/workflows/ci.yml`
+- [x] `README.md` (evals paragraph) and `docs/memory/skill-evals.md`: record results with the script; `CHANGELOG.md` under Unreleased
 
 ## Acceptance criteria
 
@@ -26,3 +26,7 @@ Pillar 1 (quality workflow). Eval results live only as prose in `CHANGELOG.md` (
 ## Depends on
 
 none
+
+## Plan
+
+[docs/plans/2026-11-26-eval-history.md](../plans/2026-11-26-eval-history.md)

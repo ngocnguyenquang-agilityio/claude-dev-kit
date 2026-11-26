@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node --test tests/hooks.test.mjs tests/inventory.test.mjs
+      - run: node --test tests/hooks.test.mjs tests/inventory.test.mjs tests/eval-history.test.mjs
       # Pinned so a new Claude Code release cannot turn a green build red on its own.
       - run: npm install --global @anthropic-ai/claude-code@2.1.314
       # --strict fails on warnings the runtime tolerates, such as unknown manifest fields.
