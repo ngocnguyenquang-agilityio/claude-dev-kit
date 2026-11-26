@@ -2,7 +2,7 @@
 // its lockfile names, and block the others. Exit code 2 blocks the tool call and
 // sends stderr back to Claude. Projects with no lockfile and no `packageManager`
 // in .claude/kit.json are left alone.
-import { binaryName, commandIndex, commandSegments, loadConfig, readStdinJson } from "./lib.mjs";
+import { binaryName, commandIndex, commandSegments, loadConfig, readStdinJson, recordUsage } from "./lib.mjs";
 
 const config = loadConfig();
 if (!config.enforcePackageManager || !config.packageManager) process.exit(0);
@@ -27,6 +27,7 @@ for (const words of commandSegments(command, { blankQuotes: true })) {
   if (blockedManager || blockedRunner) {
     const replacement = blockedRunner ? RUNNER_REPLACEMENT[chosen] : chosen;
     console.error(`Blocked "${bin}": this project uses ${chosen} only (its lockfile says so). Use ${replacement} instead.`);
+    recordUsage("package-manager-guard", "block");
     process.exit(2);
   }
 }

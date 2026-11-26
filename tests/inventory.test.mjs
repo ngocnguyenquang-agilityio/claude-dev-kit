@@ -19,9 +19,10 @@ function write(file, content) {
 
 // A repo with skills alpha and beta, agent helper and two registered hooks.
 // `unlisted.mjs` sits in hooks/ but hooks.json does not register it.
-function makeRepo(extra = {}) {
+function makeRepo(extra = {}, { git = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "inventory-repo-"));
   made.push(root);
+  if (git) spawnSync("git", ["init", "-q", root]);
   const plugin = path.join(root, "plugins", "dev-kit");
   write(path.join(plugin, "skills", "alpha", "SKILL.md"), "---\nname: alpha\n---\n");
   write(path.join(plugin, "skills", "beta", "SKILL.md"), "---\nname: beta\n---\n");
@@ -66,16 +67,16 @@ function makeProjectsDir() {
   return dir;
 }
 
-function skillCall(name, timestamp = "2026-11-10T10:00:00.000Z") {
-  return { type: "assistant", timestamp, message: { content: [{ type: "tool_use", name: "Skill", input: { skill: name } }] } };
+function skillCall(name, timestamp = "2026-11-10T10:00:00.000Z", cwd) {
+  return { type: "assistant", timestamp, cwd, message: { content: [{ type: "tool_use", name: "Skill", input: { skill: name } }] } };
 }
 
-function agentCall(name, timestamp = "2026-11-10T10:00:00.000Z") {
-  return { type: "assistant", timestamp, message: { content: [{ type: "tool_use", name: "Agent", input: { subagent_type: name, prompt: "x" } }] } };
+function agentCall(name, timestamp = "2026-11-10T10:00:00.000Z", cwd) {
+  return { type: "assistant", timestamp, cwd, message: { content: [{ type: "tool_use", name: "Agent", input: { subagent_type: name, prompt: "x" } }] } };
 }
 
-function slashCommand(name, timestamp = "2026-11-10T10:00:00.000Z") {
-  return { type: "user", timestamp, message: { content: `<command-name>${name}</command-name>\n<command-args></command-args>` } };
+function slashCommand(name, timestamp = "2026-11-10T10:00:00.000Z", cwd) {
+  return { type: "user", timestamp, cwd, message: { content: `<command-name>${name}</command-name>\n<command-args></command-args>` } };
 }
 
 function writeTranscript(folder, entries, name = "session.jsonl") {
@@ -98,6 +99,21 @@ function rows(out) {
     const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
     if (cells[0] === "Component" || /^-+$/.test(cells[0])) continue;
     table[cells[0]] = { kind: cells[1], uses: cells[2], evidence: cells[3], flags: cells[4] };
+  }
+  return table;
+}
+
+// The per-project table as { project: uses }.
+function projectRows(out) {
+  const table = {};
+  let inside = false;
+  for (const line of out.split("\n")) {
+    if (line.startsWith("| Project |")) inside = true;
+    else if (!line.startsWith("|")) inside = false;
+    else if (inside && !line.startsWith("| ---")) {
+      const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
+      table[cells[0]] = cells[1];
+    }
   }
   return table;
 }
@@ -156,14 +172,65 @@ describe("inventory: use counts", () => {
     assert.equal(table["claude-api"], undefined);
   });
 
-  it("adds up several sessions and the worktree folders of the same repo, but not another project", () => {
+  it("adds up several sessions and the worktree folders of the same repo, but not another project, with --this-repo", () => {
     const root = makeRepo();
     const projects = makeProjectsDir();
     writeTranscript(transcriptFolder(projects, root), [skillCall("dev-kit:alpha")], "one.jsonl");
     writeTranscript(transcriptFolder(projects, root), [skillCall("dev-kit:alpha")], "two.jsonl");
     writeTranscript(transcriptFolder(projects, root, "--claude-worktrees-x"), [skillCall("dev-kit:alpha")]);
     writeTranscript(transcriptFolder(projects, root, "-other"), [skillCall("dev-kit:alpha")]);
-    assert.equal(rows(run(root, projects).out).alpha.uses, "3");
+    assert.equal(rows(run(root, projects, "--this-repo").out).alpha.uses, "3");
+  });
+
+  it("counts another project's folder by default", () => {
+    const root = makeRepo();
+    const projects = makeProjectsDir();
+    writeTranscript(transcriptFolder(projects, root), [skillCall("dev-kit:alpha")]);
+    writeTranscript(transcriptFolder(projects, root, "-other"), [skillCall("dev-kit:alpha")]);
+    assert.equal(rows(run(root, projects).out).alpha.uses, "2");
+  });
+
+  it("labels a worktree cwd as its repo and merges scratch-* cwds into one scratch row", () => {
+    const root = makeRepo();
+    const projects = makeProjectsDir();
+    const folder = transcriptFolder(projects, root);
+    writeTranscript(folder, [skillCall("dev-kit:alpha", undefined, "/home/me/code/myrepo")], "a.jsonl");
+    writeTranscript(folder, [skillCall("dev-kit:alpha", undefined, "C:\\code\\myrepo\\.claude\\worktrees\\feat-x")], "b.jsonl");
+    writeTranscript(folder, [skillCall("dev-kit:beta", undefined, "/home/me/code/myrepo/.claude/worktrees/feat-y")], "c.jsonl");
+    writeTranscript(folder, [skillCall("dev-kit:alpha", undefined, "/tmp/scratch-1111")], "d.jsonl");
+    writeTranscript(folder, [agentCall("dev-kit:helper", undefined, "C:\\tmp\\scratch-2222")], "e.jsonl");
+    const result = run(root, projects);
+    assert.deepEqual(projectRows(result.out), { myrepo: "3", scratch: "2" });
+    assert.ok(!/[\\/]/.test(result.out.slice(result.out.indexOf("| Project |"))));
+  });
+
+  it("labels every use in a file by the cwd of its first entry, even after a cd", () => {
+    const root = makeRepo();
+    const projects = makeProjectsDir();
+    writeTranscript(transcriptFolder(projects, root), [
+      { type: "user", timestamp: "2026-11-10T09:00:00.000Z", cwd: "/x/repo", message: { content: "hi" } },
+      skillCall("dev-kit:alpha", undefined, "/x/repo/sub/evals"),
+      skillCall("dev-kit:beta", undefined, "/x/repo"),
+    ]);
+    assert.deepEqual(projectRows(run(root, projects).out), { repo: "2" });
+  });
+
+  it("counts a use with no cwd under the label of the file's cwd", () => {
+    const root = makeRepo();
+    const projects = makeProjectsDir();
+    writeTranscript(transcriptFolder(projects, root), [
+      skillCall("dev-kit:alpha"),
+      skillCall("dev-kit:beta", undefined, "/x/repo"),
+    ]);
+    assert.deepEqual(projectRows(run(root, projects).out), { repo: "2" });
+  });
+
+  it("labels a transcript with no cwd `unknown` and omits projects with no use", () => {
+    const root = makeRepo();
+    const projects = makeProjectsDir();
+    writeTranscript(transcriptFolder(projects, root, "-other"), [skillCall("dev-kit:alpha")]);
+    writeTranscript(transcriptFolder(projects, root, "-idle"), [skillCall("claude-api", undefined, "/x/idle")]);
+    assert.deepEqual(projectRows(run(root, projects).out), { unknown: "1" });
   });
 
   it("counts only entries on or after --since", () => {
@@ -264,6 +331,61 @@ describe("inventory: flags", () => {
     const table = rows(run(root, makeProjectsDir()).out);
     assert.equal(table.guard.uses, "not counted");
     assert.ok(!table.guard.flags.includes("unused"));
+  });
+});
+
+describe("inventory: hook usage log", () => {
+  const hooksJson = JSON.stringify({
+    hooks: {
+      PreToolUse: [{ hooks: [{ type: "command", command: "node", args: ["${CLAUDE_PLUGIN_ROOT}/hooks/safety-guard.mjs"] }] }],
+      SessionStart: [{ hooks: [{ type: "command", command: "node", args: ["${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs"] }] }],
+    },
+  });
+
+  function repoWithLog(lines) {
+    const root = makeRepo(
+      {
+        "plugins/dev-kit/hooks/hooks.json": hooksJson,
+        "plugins/dev-kit/hooks/safety-guard.mjs": "",
+        "plugins/dev-kit/hooks/session-start.mjs": "",
+      },
+      { git: true },
+    );
+    const logPath = spawnSync("git", ["-C", root, "rev-parse", "--git-path", "dev-kit-usage"], { encoding: "utf8" }).stdout.trim();
+    write(path.resolve(root, logPath), lines.map((line) => (typeof line === "string" ? line : JSON.stringify(line))).join("\n") + "\n");
+    return root;
+  }
+
+  it("totals a guard hook's actions with its ask and block counts", () => {
+    const root = repoWithLog([
+      { hook: "safety-guard", decision: "ask", date: "2026-11-10" },
+      { hook: "safety-guard", decision: "ask", date: "2026-11-11" },
+      { hook: "safety-guard", decision: "block", date: "2026-11-12" },
+      "not json",
+    ]);
+    const result = run(root, makeProjectsDir());
+    assert.match(result.out, /Hook uses: this repo only/);
+    const table = rows(result.out);
+    assert.equal(table["safety-guard"].uses, "3 (ask 2, block 1)");
+    assert.ok(!table["safety-guard"].flags.includes("unused"));
+  });
+
+  it("does not count a log line dated before --since", () => {
+    const root = repoWithLog([
+      { hook: "safety-guard", decision: "ask", date: "2026-10-01" },
+      { hook: "safety-guard", decision: "block", date: "2026-11-12" },
+    ]);
+    const table = rows(run(root, makeProjectsDir(), "--since", "2026-11-01").out);
+    assert.equal(table["safety-guard"].uses, "1 (ask 0, block 1)");
+  });
+
+  it("shows a plain total for a hook that is not a guard", () => {
+    const root = repoWithLog([
+      { hook: "session-start", decision: "fired", date: "2026-11-10" },
+      { hook: "session-start", decision: "fired", date: "2026-11-11" },
+    ]);
+    const table = rows(run(root, makeProjectsDir()).out);
+    assert.equal(table["session-start"].uses, "2");
   });
 });
 

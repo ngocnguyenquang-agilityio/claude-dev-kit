@@ -14,6 +14,7 @@ import {
   loadConfig,
   projectDir,
   readStdinJson,
+  recordUsage,
 } from "./lib.mjs";
 
 const input = await readStdinJson();
@@ -56,6 +57,7 @@ const indexPath = path.join(issuesDir, "README.md");
 const index = `${config.issuesDir}/README.md`;
 const finish = "Run /dev-kit:issue finish before opening the PR.";
 const deny = (reason) => {
+  recordUsage("pr-status-guard", "block");
   console.error(`${reason}. ${finish}`);
   process.exit(2);
 };

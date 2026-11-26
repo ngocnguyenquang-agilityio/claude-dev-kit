@@ -223,6 +223,59 @@ describe("package-manager-guard", () => {
 
     assert.equal(runHook("package-manager-guard.mjs", project, bash("yarn add x")).code, 0);
   });
+
+  describe("usage log", () => {
+    const gitProject = () => makeProject({ "package.json": {}, "pnpm-lock.yaml": "" }, { git: true });
+    const usageFile = (project) => path.join(project, ".git", "dev-kit-usage");
+
+    it("appends one line for a block, without the command", () => {
+      const project = gitProject();
+
+      runHook("package-manager-guard.mjs", project, bash("npm install secret-pkg"));
+
+      const lines = fs.readFileSync(usageFile(project), "utf8").split("\n").filter(Boolean);
+      assert.equal(lines.length, 1);
+      const entry = JSON.parse(lines[0]);
+      assert.deepEqual(Object.keys(entry).sort(), ["date", "decision", "hook"]);
+      assert.equal(entry.hook, "package-manager-guard");
+      assert.equal(entry.decision, "block");
+      assert.match(entry.date, /^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it("writes a linked worktree's use to the main repo's log", () => {
+      const project = gitProject();
+      const git = (...args) => spawnSync("git", args, { cwd: project });
+      git("add", ".");
+      git("commit", "-q", "-m", "init");
+      const worktree = path.join(os.tmpdir(), `dev-kit-test-worktree-${process.pid}-${projects.length}`);
+      projects.push(worktree);
+      assert.equal(git("worktree", "add", "-q", worktree).status, 0);
+
+      assert.equal(runHook("package-manager-guard.mjs", worktree, bash("npm install")).code, 2);
+
+      const lines = fs.readFileSync(usageFile(project), "utf8").split("\n").filter(Boolean);
+      assert.equal(lines.length, 1);
+      assert.equal(JSON.parse(lines[0]).hook, "package-manager-guard");
+    });
+
+    it("writes nothing for an allowed command", () => {
+      const project = gitProject();
+
+      assert.equal(runHook("package-manager-guard.mjs", project, bash("pnpm test")).code, 0);
+
+      assert.equal(fs.existsSync(usageFile(project)), false);
+    });
+
+    it("still blocks outside a git repo and writes nothing", () => {
+      const project = makeProject({ "package.json": {}, "pnpm-lock.yaml": "" });
+
+      const result = runHook("package-manager-guard.mjs", project, bash("npm install"));
+
+      assert.equal(result.code, 2);
+      assert.match(result.err, /^Blocked "npm": this project uses pnpm only/);
+      assert.deepEqual(fs.readdirSync(project).sort(), ["package.json", "pnpm-lock.yaml"]);
+    });
+  });
 });
 
 describe("safety-guard", () => {
@@ -600,6 +653,44 @@ describe("safety-guard", () => {
       assert.deepEqual(runHook("safety-guard.mjs", project, input), { code: 0, out: "", err: "" });
     });
   }
+
+  describe("usage log", () => {
+    const usageEntries = (gitProject) => {
+      const file = path.join(gitProject, ".git", "dev-kit-usage");
+      return fs.existsSync(file) ? fs.readFileSync(file, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line)) : [];
+    };
+
+    it("logs an ask for a git write", () => {
+      const gitProject = makeProject({ "package.json": {} }, { git: true });
+
+      const result = runHook("safety-guard.mjs", gitProject, bash("git push origin main"));
+
+      assert.equal(JSON.parse(result.out).hookSpecificOutput.permissionDecision, "ask");
+      const entries = usageEntries(gitProject);
+      assert.equal(entries.length, 1);
+      assert.equal(entries[0].hook, "safety-guard");
+      assert.equal(entries[0].decision, "ask");
+    });
+
+    it("logs a block for a secret read", () => {
+      const gitProject = makeProject({ "package.json": {} }, { git: true });
+
+      assert.equal(runHook("safety-guard.mjs", gitProject, bash("cat .env")).code, 2);
+
+      const entries = usageEntries(gitProject);
+      assert.equal(entries.length, 1);
+      assert.equal(entries[0].hook, "safety-guard");
+      assert.equal(entries[0].decision, "block");
+    });
+
+    it("logs nothing for an allowed command", () => {
+      const gitProject = makeProject({ "package.json": {} }, { git: true });
+
+      assert.equal(runHook("safety-guard.mjs", gitProject, bash("git status")).code, 0);
+
+      assert.deepEqual(usageEntries(gitProject), []);
+    });
+  });
 });
 
 describe("safety-guard on the base branch", () => {
@@ -976,6 +1067,19 @@ describe("session-start", () => {
     assert.match(out, /working rules/);
     assert.doesNotMatch(out, /project context/);
   });
+
+  describe("usage log", () => {
+    const usage = (project) =>
+      fs.readFileSync(path.join(project, ".git", "dev-kit-usage"), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+
+    it("logs fired", () => {
+      const project = makeProject({}, { git: true });
+
+      assert.equal(runHook("session-start.mjs", project).code, 0);
+
+      assert.deepEqual(usage(project).map(({ hook, decision }) => [hook, decision]), [["session-start", "fired"]]);
+    });
+  });
 });
 
 describe("stop-checks", () => {
@@ -1240,6 +1344,30 @@ describe("stop-checks", () => {
     assert.equal(runHook("stop-checks.mjs", project, {}).code, 2);
     assert.equal(runCount(project), 2);
   });
+
+  describe("usage log", () => {
+    const usage = (project) =>
+      fs.readFileSync(path.join(project, ".git", "dev-kit-usage"), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+
+    it("logs a stop with failing checks as a block, and a passing one as fired", () => {
+      const failing = withScripts({ typecheck: "node -e \"process.exit(1)\"" });
+      const passing = withScripts({ typecheck: "node -e \"process.exit(0)\"" });
+
+      assert.equal(runHook("stop-checks.mjs", failing, {}).code, 2);
+      assert.equal(runHook("stop-checks.mjs", passing, {}).code, 0);
+
+      assert.deepEqual(usage(failing).map(({ hook, decision }) => [hook, decision]), [["stop-checks", "block"]]);
+      assert.deepEqual(usage(passing).map(({ hook, decision }) => [hook, decision]), [["stop-checks", "fired"]]);
+    });
+
+    it("logs nothing when no check ran", () => {
+      const project = makeProject({ "README.md": "x" }, { git: true });
+
+      assert.equal(runHook("stop-checks.mjs", project, {}).code, 0);
+
+      assert.equal(fs.existsSync(path.join(project, ".git", "dev-kit-usage")), false);
+    });
+  });
 });
 
 describe("format-file", () => {
@@ -1287,6 +1415,19 @@ describe("format-file", () => {
     assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: "src/a.ts" } }).code, 0);
     assert.equal(fs.existsSync(path.join(project, "tool-args.json")), false);
   });
+
+  describe("usage log", () => {
+    const usage = (project) =>
+      fs.readFileSync(path.join(project, ".git", "dev-kit-usage"), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+
+    it("logs one format after Prettier ran", () => {
+      const project = projectWithRecordingTool("prettier", { "src/a.ts": "x" }, { git: true });
+
+      assert.equal(runHook("format-file.mjs", project, { tool_input: { file_path: "src/a.ts" } }).code, 0);
+
+      assert.deepEqual(usage(project).map(({ hook, decision }) => [hook, decision]), [["format-file", "format"]]);
+    });
+  });
 });
 
 describe("notify", () => {
@@ -1307,6 +1448,22 @@ describe("notify", () => {
     assert.deepEqual(runHookWithNotifications("notify.mjs", project, {}).notifications, [
       `Claude Code: ${path.basename(project)}|Needs your attention.`,
     ]);
+  });
+
+  describe("usage log", () => {
+    const usage = (project) =>
+      fs.readFileSync(path.join(project, ".git", "dev-kit-usage"), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+
+    it("logs notify when notifications are on, and nothing when CLAUDE_NOTIFY=0", () => {
+      const project = makeProject({}, { git: true });
+      const off = makeProject({}, { git: true });
+
+      assert.equal(runHookWithNotifications("notify.mjs", project, { message: "x" }).code, 0);
+      assert.equal(runHook("notify.mjs", off, { message: "x" }, { CLAUDE_NOTIFY: "0" }).code, 0);
+
+      assert.deepEqual(usage(project).map(({ hook, decision }) => [hook, decision]), [["notify", "notify"]]);
+      assert.equal(fs.existsSync(path.join(off, ".git", "dev-kit-usage")), false);
+    });
   });
 });
 
@@ -1385,6 +1542,22 @@ describe("context-nudge", () => {
     fs.writeFileSync(path.join(project, ".claude", "wip", `${branch.replaceAll("/", "-")}.md`), "note");
 
     assert.equal(prompt(project, transcript(project, long()), sessionId()).out, "");
+  });
+
+  describe("usage log", () => {
+    const usage = (project) =>
+      fs.readFileSync(path.join(project, ".git", "dev-kit-usage"), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+
+    it("logs a nudge once", () => {
+      const project = makeProject({}, { git: true });
+      const file = transcript(project, long());
+      const id = sessionId();
+
+      prompt(project, file, id);
+      prompt(project, file, id);
+
+      assert.deepEqual(usage(project).map(({ hook, decision }) => [hook, decision]), [["context-nudge", "nudge"]]);
+    });
   });
 });
 
@@ -1490,6 +1663,34 @@ describe("pr-status-guard", () => {
     const project = withIssues({ "docs/issues/README.md": index(indexRow(75, "open")) });
     const input = { tool_name: "PowerShell", tool_input: { command: 'gh pr create --title T --body @"\nCloses #75\n"@' } };
     assert.equal(runHook("pr-status-guard.mjs", project, input).code, 2);
+  });
+
+  describe("usage log", () => {
+    const usageEntries = (gitProject) => {
+      const file = path.join(gitProject, ".git", "dev-kit-usage");
+      return fs.existsSync(file) ? fs.readFileSync(file, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line)) : [];
+    };
+    const gitProject = (status) =>
+      withIssues({ "docs/issues/README.md": index(indexRow(75, status)) }, makeProject({ "package.json": {} }, { git: true }));
+
+    it("logs a block when the issue is not closed", () => {
+      const project = gitProject("open");
+
+      assert.equal(guard(project, create("Closes #75")).code, 2);
+
+      const entries = usageEntries(project);
+      assert.equal(entries.length, 1);
+      assert.equal(entries[0].hook, "pr-status-guard");
+      assert.equal(entries[0].decision, "block");
+    });
+
+    it("logs nothing when the PR passes", () => {
+      const project = gitProject("closed");
+
+      assert.equal(guard(project, create("Closes #75")).code, 0);
+
+      assert.deepEqual(usageEntries(project), []);
+    });
   });
 });
 

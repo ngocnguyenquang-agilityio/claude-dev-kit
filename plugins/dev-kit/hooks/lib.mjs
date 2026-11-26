@@ -72,6 +72,22 @@ export function run(words) {
   return { ok: result.status === 0, output: output.trim(), stdout: result.stdout ?? "" };
 }
 
+// Count one hook decision: a JSONL line {hook, decision, date} in the common
+// git dir (the main repo's, also from a linked worktree), so nothing lands in
+// the working tree. Only the hook name, the decision and the day are written,
+// never a command, path or prompt. Counting must not change what a hook does,
+// so every failure is swallowed.
+export function recordUsage(hook, decision) {
+  try {
+    const location = run(["git", "rev-parse", "--git-common-dir"]);
+    if (!location.ok) return;
+    const line = JSON.stringify({ hook, decision, date: new Date().toISOString().slice(0, 10) });
+    fs.appendFileSync(path.join(path.resolve(projectDir, location.stdout.trim()), "dev-kit-usage"), `${line}\n`);
+  } catch {
+    // Usage counting is optional.
+  }
+}
+
 // Like run(), but gives up after `timeoutMs` and stops the whole process
 // tree. spawnSync's own timeout kills only the program it started, and a shim
 // like npm.cmd starts cmd.exe, which starts the real program, which would keep

@@ -6,11 +6,11 @@ Pillar 1 (quality workflow), review cadence. `scripts/inventory.mjs` reads only 
 
 ## Tasks
 
-- [ ] `scripts/inventory.mjs`: read `dev-kit:*` `Skill`, `Agent` and slash-command calls from every folder under `--projects-dir`, not only this repo's; add a `--this-repo` flag for the old behavior
-- [ ] Print uses per project as a second table, labelled by the last segment of the project path only, so the header's promise that no path is printed still holds; no transcript text
-- [ ] Hooks: append one line per decision (`hook`, `decision` such as allow/ask/block/nudge, date) to the file at `git rev-parse --git-path dev-kit-usage`; never the command, path or prompt text. A hook added later (such as #84's) logs the same way
-- [ ] `scripts/inventory.mjs`: read that file for `--root` and fill the hook rows' Uses, with `ask` and `block` counts for the guards
-- [ ] Tests in `tests/inventory.test.mjs` and `tests/hooks.test.mjs`; `README.md`, the Review cadence in `docs/vision.md` and the header of `scripts/inventory.mjs` (both say "this repo's transcripts"), and `CHANGELOG.md` under Unreleased
+- [x] `scripts/inventory.mjs`: read `dev-kit:*` `Skill`, `Agent` and slash-command calls from every folder under `--projects-dir`, not only this repo's; add a `--this-repo` flag for the old behavior
+- [x] Print uses per project as a second table, labelled by the last segment of the project path only, so the header's promise that no path is printed still holds; no transcript text
+- [x] Hooks: append one line per decision (`hook`, `decision` such as allow/ask/block/nudge, date) to the file at `git rev-parse --git-path dev-kit-usage`; never the command, path or prompt text. A hook added later (such as #84's) logs the same way
+- [x] `scripts/inventory.mjs`: read that file for `--root` and fill the hook rows' Uses, with `ask` and `block` counts for the guards
+- [x] Tests in `tests/inventory.test.mjs` and `tests/hooks.test.mjs`; `README.md`, the Review cadence in `docs/vision.md` and the header of `scripts/inventory.mjs` (both say "this repo's transcripts"), and `CHANGELOG.md` under Unreleased
 
 ## Acceptance criteria
 
@@ -29,6 +29,10 @@ Pillar 1 (quality workflow), review cadence. `scripts/inventory.mjs` reads only 
 
 none
 
+## Plan
+
+[docs/plans/2026-11-26-inventory-all-projects.md](../plans/2026-11-26-inventory-all-projects.md)
+
 ## Decisions
 
 Settled in a `grill` round on 2026-11-26.
@@ -46,7 +50,8 @@ Settled in a `grill` round on 2026-11-26.
 - Outside a git repo, or when the write fails, the hook skips the write silently and its decision is unchanged.
 - A hook's Uses cell shows the total of its actions; guards add a breakdown, for example `12 (ask 9, block 3)`.
 - `--this-repo` keeps the current folder filter: this repo and its worktrees.
-- A transcript with no `cwd` falls back to its folder name as the label.
+- A transcript with no `cwd` is labelled `unknown`: its folder name is the encoded full path, which the table must not print. Labels come from the first `cwd` in each transcript file, since `cwd` follows every `cd`.
+- The log lives in the git common dir (`git rev-parse --git-common-dir`), not `--git-path`, which resolves a custom name to a linked worktree's private folder; this keeps a worktree's hook uses in its repo's log.
 
 **Out of scope**
 

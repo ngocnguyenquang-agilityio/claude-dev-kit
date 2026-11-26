@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { loadConfig, projectDir, readStdinJson, run } from "./lib.mjs";
+import { loadConfig, projectDir, readStdinJson, recordUsage, run } from "./lib.mjs";
 
 // Context size is everything the last reply read: fresh input plus the cache.
 // Looked for from the end of the transcript, which is one JSON object per line.
@@ -62,6 +62,7 @@ try {
 
   const where = note ? ` The note goes to ${note}.` : "";
   const message = `dev-kit: this session holds about ${Math.round(tokens / 1000)}k tokens of context. Run /dev-kit:handoff, then continue in a fresh session.${where}`;
+  recordUsage("context-nudge", "nudge");
   console.log(JSON.stringify({ systemMessage: message }));
 } catch {
   // Fail open: a nudge is never worth breaking a prompt.

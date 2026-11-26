@@ -10,7 +10,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fileArgument, loadConfig, projectDir, readStdinJson, run, runTimed, scriptWords, sendNotification, tail } from "./lib.mjs";
+import { fileArgument, loadConfig, projectDir, readStdinJson, recordUsage, run, runTimed, scriptWords, sendNotification, tail } from "./lib.mjs";
 
 function finish() {
   sendNotification("Finished. Your turn.");
@@ -98,12 +98,15 @@ for (const words of checks) {
       `The ${config.stopCheckTimeoutSeconds} s that all stop checks share ran out while ${words.join(" ")} was running, so it was stopped. ` +
         `Speed it up, or raise stopCheckTimeoutSeconds in .claude/kit.json. The checks did not pass.${partial}`,
     );
+    recordUsage("stop-checks", "block");
     process.exit(2);
   }
   if (!result.ok) {
     console.error(`${words.join(" ")} failed. Fix it before finishing:\n${tail(result.output)}`);
+    recordUsage("stop-checks", "block");
     process.exit(2);
   }
 }
 fs.writeFileSync(lastPass, fingerprint);
+recordUsage("stop-checks", "fired");
 finish();
