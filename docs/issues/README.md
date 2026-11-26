@@ -37,7 +37,7 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 76 | [Ship pr and working rules: stop before a PR whose issue's status docs are not updated](76-ship-pr-status-docs.md) | closed | none |
 | 80 | [Inventory: count uses across every project and count hook decisions](80-inventory-all-projects.md) | closed | none |
 | 81 | [Evals: run the eval suite on Linux in CI so git and gh steps are covered](81-ci-evals-linux.md) | open | none |
-| 82 | [Eval history: record pass rates per case and compare with a baseline](82-eval-history.md) | open | none |
+| 82 | [Eval history: record pass rates per case and compare with a baseline](82-eval-history.md) | closed | none |
 | 83 | [Plan: tick steps as they pass and resume a half-done plan in a new session](83-plan-resume.md) | closed | none |
 | 84 | [Session state: write the handoff State from a hook when a session ends](84-session-state-hook.md) | open | none |
 | 85 | [Memory: flag stale topic files and ask for durable facts in issue finish](85-memory-staleness.md) | open | none |
