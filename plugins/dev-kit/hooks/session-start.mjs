@@ -26,6 +26,7 @@ if (config.sessionStart.context) {
     `- Checks to run before saying work is done: ${checks.length ? checks.join(", ") : "none found in package.json"}`,
   ];
   if (config.issuesDir) lines.push(`- Issue specs: ${config.issuesDir}/`);
+  lines.push(...planLines(branch, baseBranch));
 
   const noteName = branch && `.claude/wip/${branch.replaceAll("/", "-")}.md`;
   const note = noteName && path.join(projectDir, noteName);
@@ -80,6 +81,37 @@ function isMergedInto(base) {
   const head = run(["git", "rev-parse", "HEAD"]).stdout.trim();
   const firstParents = run(["git", "rev-list", "--first-parent", base, "--not", "HEAD^@"]).stdout.split("\n");
   return !firstParents.includes(head);
+}
+
+// Plans under docs/plans/ changed on this branch (committed since the merge-base,
+// modified or untracked) with a ticked and an unticked step are half done. A step
+// is a top-level checkbox line; `k` is the first unticked one, where `plan` resumes.
+// On the base branch only uncommitted and untracked plans count.
+function planLines(branch, baseBranch) {
+  const names = ([command, ...rest]) => run(["git", command, "-z", ...rest]).stdout.split("\0").filter((name) => name.endsWith(".md"));
+  const changed = new Set([
+    ...names(["diff", "--name-only", "HEAD", "--", "docs/plans"]),
+    ...names(["ls-files", "--others", "--exclude-standard", "--", "docs/plans"]),
+  ]);
+  if (branch !== baseBranch) {
+    const base = baseRef(baseBranch);
+    const mergeBase = base && run(["git", "merge-base", "HEAD", base]);
+    if (mergeBase?.ok) {
+      if (isMergedInto(base)) return [];
+      for (const name of names(["diff", "--name-only", mergeBase.output, "HEAD", "--", "docs/plans"])) changed.add(name);
+    }
+  }
+  const lines = [];
+  for (const name of [...changed].sort()) {
+    const file = path.join(projectDir, name);
+    if (!fs.existsSync(file)) continue;
+    const steps = fs.readFileSync(file, "utf8").split(/\r?\n/).map((line) => line.match(/^[-*] \[( |x|X)\]/)?.[1]).filter(Boolean);
+    const first = steps.findIndex((mark) => mark === " ");
+    if (first !== -1 && steps.some((mark) => mark !== " ")) {
+      lines.push(`- Plan in progress: ${name}, step ${first + 1} of ${steps.length}`);
+    }
+  }
+  return lines;
 }
 
 recordUsage("session-start", "fired");
