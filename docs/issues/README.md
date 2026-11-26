@@ -35,5 +35,13 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 73 | Issue new: draft a list of issues in full, review once, then file them in dependency order (not planned) | closed | #72 |
 | 75 | [PR status guard: block gh pr create while the closed issue's status docs are not updated](75-pr-status-guard.md) | closed | none |
 | 76 | [Ship pr and working rules: stop before a PR whose issue's status docs are not updated](76-ship-pr-status-docs.md) | closed | none |
+| 80 | [Inventory: count uses across every project and count hook decisions](80-inventory-all-projects.md) | open | none |
+| 81 | [Evals: run the eval suite on Linux in CI so git and gh steps are covered](81-ci-evals-linux.md) | open | none |
+| 82 | [Eval history: record pass rates per case and compare with a baseline](82-eval-history.md) | open | none |
+| 83 | [Plan: tick steps as they pass and resume a half-done plan in a new session](83-plan-resume.md) | open | none |
+| 84 | [Session state: write the handoff State from a hook when a session ends](84-session-state-hook.md) | open | none |
+| 85 | [Memory: flag stale topic files and ask for durable facts in issue finish](85-memory-staleness.md) | open | none |
+| 86 | [Review patterns: remember recurring finding kinds and check them in plan](86-review-patterns.md) | open | none |
+| 87 | [Audit backlog quick wins: A14, A18, A20 and A21](87-audit-quick-wins.md) | open | #84 |
 
-Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67 and 69 are independent of them and of each other. Next: 75 → 76. 75 blocks `gh pr create` in a hook, so 76's own PR is already checked by it; 76 makes `ship pr` and the working rules stop first.
+Order: 15 → 16 → 17. All three change `safety-guard.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 21, 23, 26, 28, 30, 32, 34, 35, 37, 39, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67 and 69 are independent of them and of each other. Next: 75 → 76. 75 blocks `gh pr create` in a hook, so 76's own PR is already checked by it; 76 makes `ship pr` and the working rules stop first. Planned order for 80 to 87: 80 → 83 → 82 → 81 → 85 → 84 → 86 → 87. 80, 83, 84 and 85 all change `session-start.mjs` and `tests/hooks.test.mjs`, so each starts after the previous one is merged. 87 depends on 84, since both compute the `wipNote` name.
