@@ -6,12 +6,12 @@ Pillar 2 (session memory). When a session ends in the middle of an approved plan
 
 ## Tasks
 
-- [ ] `plugins/dev-kit/skills/plan/SKILL.md`: write each step as a `- [ ]` line; in Implement, tick it in the plan file right after its Done when check gives the expected result, never before
-- [ ] `plan`: when asked to continue a plan, start at its first unticked step and do not redo ticked ones
-- [ ] `plugins/dev-kit/hooks/session-start.mjs`: name each plan under `docs/plans/` changed on this branch (committed against the base, or uncommitted) that has both ticked and unticked steps, as "Plan in progress: <path>, step k of n"
-- [ ] Hook tests in `tests/hooks.test.mjs`
-- [ ] New eval `plan-resume`: a fixture plan with 2 of 4 steps ticked; the prompt asks to continue it. `tool_used` grader: `dev-kit:implementer` is spawned for step 3 and never for steps 1 or 2
-- [ ] `README.md` and `CHANGELOG.md` under Unreleased
+- [x] `plugins/dev-kit/skills/plan/SKILL.md`: write each step as a `- [ ]` line; in Implement, tick it in the plan file right after its Done when check gives the expected result, never before
+- [x] `plan`: when asked to continue a plan, start at its first unticked step and do not redo ticked ones
+- [x] `plugins/dev-kit/hooks/session-start.mjs`: name each plan under `docs/plans/` changed on this branch (committed against the base, or uncommitted) that has both ticked and unticked steps, as "Plan in progress: <path>, step k of n"
+- [x] Hook tests in `tests/hooks.test.mjs`
+- [x] New eval `plan-resume`: a fixture plan with 2 of 4 steps ticked; the prompt asks to continue it. `tool_used` grader: `dev-kit:implementer` is spawned for step 3 and never for steps 1 or 2
+- [x] `README.md` and `CHANGELOG.md` under Unreleased
 
 ## Acceptance criteria
 
@@ -28,3 +28,7 @@ Pillar 2 (session memory). When a session ends in the middle of an approved plan
 ## Depends on
 
 none
+
+## Plan
+
+[docs/plans/2026-11-26-plan-resume.md](../plans/2026-11-26-plan-resume.md)

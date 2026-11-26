@@ -936,6 +936,94 @@ describe("session-start", () => {
     assert.match(runHook("session-start.mjs", project).out, /wire the filter/);
   });
 
+  describe("plan in progress", () => {
+    const git = (project, ...args) => spawnSync("git", args, { cwd: project, encoding: "utf8" }).stdout.trim();
+    const plan = (...marks) => `# Plan\n\n## Steps\n\n${marks.map((m, i) => `- [${m}] ${i + 1}. Step\n  - [ ] nested`).join("\n\n")}\n`;
+    const write = (project, name, text) => {
+      fs.mkdirSync(path.join(project, "docs", "plans"), { recursive: true });
+      fs.writeFileSync(path.join(project, "docs", "plans", name), text);
+    };
+    const PLAN_LINE = /Plan in progress: /;
+
+    it("names a committed plan with 2 of 4 steps ticked", () => {
+      const project = branchWithCommits("feat/search", []);
+      write(project, "2026-01-01-search.md", plan("x", "x", " ", " "));
+      git(project, "add", ".");
+      git(project, "commit", "-q", "-m", "docs(#3): plan");
+
+      assert.match(runHook("session-start.mjs", project).out, /Plan in progress: docs\/plans\/2026-01-01-search\.md, step 3 of 4/);
+    });
+
+    it("names an untracked half-done plan", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      write(project, "new.md", plan("x", " "));
+
+      assert.match(runHook("session-start.mjs", project).out, /Plan in progress: docs\/plans\/new\.md, step 2 of 2/);
+    });
+
+    it("names a plan with uncommitted changes", () => {
+      const project = branchWithCommits("feat/search", []);
+      write(project, "p.md", plan(" ", " "));
+      git(project, "add", ".");
+      git(project, "commit", "-q", "-m", "docs: plan");
+      git(project, "checkout", "-q", "main");
+      git(project, "merge", "-q", "--ff-only", "feat/search");
+      write(project, "p.md", plan("x", " "));
+
+      assert.match(runHook("session-start.mjs", project).out, /docs\/plans\/p\.md, step 2 of 2/);
+    });
+
+    it("stays silent for all ticked, none ticked and unchanged plans", () => {
+      const project = branchWithCommits("feat/search", []);
+      git(project, "checkout", "-q", "main");
+      write(project, "old.md", plan("x", " "));
+      git(project, "add", ".");
+      git(project, "commit", "-q", "-m", "docs: old plan");
+      git(project, "checkout", "-q", "feat/search");
+      git(project, "merge", "-q", "--ff-only", "main");
+      write(project, "done.md", plan("x", "x"));
+      write(project, "fresh.md", plan(" ", " "));
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.ok(fs.existsSync(path.join(project, "docs", "plans", "old.md")));
+      assert.doesNotMatch(out, PLAN_LINE);
+    });
+
+    it("stays silent for a half-done plan on a branch already merged into the base", () => {
+      const project = branchWithCommits("feat/search", []);
+      write(project, "half.md", plan("x", " "));
+      git(project, "add", ".");
+      git(project, "commit", "-q", "-m", "docs(#3): plan");
+      git(project, "checkout", "-q", "main");
+      git(project, "merge", "-q", "--no-ff", "-m", "Merge feat/search", "feat/search");
+      git(project, "checkout", "-q", "feat/search");
+
+      assert.doesNotMatch(runHook("session-start.mjs", project).out, PLAN_LINE);
+    });
+
+    it("prints the plan line before the handoff note", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      write(project, "half.md", plan("x", " "));
+      fs.mkdirSync(path.join(project, ".claude", "wip"), { recursive: true });
+      fs.writeFileSync(path.join(project, ".claude", "wip", "feat-search.md"), "# WIP: feat/search\n\n## Next\n\n- wire the filter\n");
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.match(out, PLAN_LINE);
+      assert.ok(out.indexOf("Plan in progress:") < out.indexOf("### Handoff note"));
+    });
+
+    it("is hidden by sessionStart.context false", () => {
+      const project = branchWithCommits("feat/search", []);
+      write(project, "new.md", plan("x", " "));
+      fs.mkdirSync(path.join(project, ".claude"), { recursive: true });
+      fs.writeFileSync(path.join(project, ".claude", "kit.json"), JSON.stringify({ sessionStart: { context: false } }));
+
+      assert.doesNotMatch(runHook("session-start.mjs", project).out, PLAN_LINE);
+    });
+  });
+
   describe("handoff note freshness", () => {
     const git = (project, ...args) => spawnSync("git", args, { cwd: project, encoding: "utf8" }).stdout.trim();
     const writeNote = (project, state) => {
