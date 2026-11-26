@@ -24,7 +24,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { baseRef, binaryName, commandIndex, commandSegments, detectBaseBranch, loadConfig, projectDir, readStdinJson, run } from "./lib.mjs";
+import { baseRef, binaryName, commandIndex, commandSegments, detectBaseBranch, loadConfig, projectDir, readStdinJson, recordUsage, run } from "./lib.mjs";
 
 const SECRET_NAME = [
   /^\.env(\..+)?$/,
@@ -365,9 +365,11 @@ function baseBranchOfEdit(file, baseDir, config) {
 // Ask the user, or block when the check's mode is "deny".
 function askOrBlock(reason, mode) {
   if (mode === "deny") {
+    recordUsage("safety-guard", "block");
     console.error(`Blocked: ${reason}`);
     process.exit(2);
   }
+  recordUsage("safety-guard", "ask");
   console.log(
     JSON.stringify({
       hookSpecificOutput: {
@@ -390,6 +392,7 @@ const shellDir = input?.cwd ?? projectDir;
 const target = shellTool ? null : (toolInput.file_path ?? toolInput.path);
 const blockedSecret = shellTool ? readsSecret(toolInput.command ?? "", shellDir) : target && isSecretPath(target, shellDir);
 if (blockedSecret) {
+  recordUsage("safety-guard", "block");
   console.error(
     "Blocked: this touches a secret file (.env*, key, credential or ~/.ssh). Ask the user for the names of the variables you need, or for a redacted copy, instead of reading the file.",
   );
@@ -397,6 +400,7 @@ if (blockedSecret) {
 }
 
 if (!shellTool && writesSecretToMemory(input?.tool_name, toolInput, shellDir)) {
+  recordUsage("safety-guard", "block");
   console.error(
     "Blocked: this writes a key, token, private key or password into the memory store (docs/memory.md, docs/memory/), which is committed. Write the fact without the value, for example `sk_test_<REDACTED>` or the name of the variable that holds it.",
   );
@@ -412,6 +416,7 @@ if (editedBase) {
 }
 
 if (shellTool && input?.agent_type === REVIEWER && !reviewerMayRun(toolInput.command ?? "", config)) {
+  recordUsage("safety-guard", "block");
   console.error(
     "Blocked: the reviewer is read-only. It may run git, gh and glab commands that inspect, the project's check scripts, kit-config and plain file readers, without redirects into files. Report the change you wanted to make as a finding instead.",
   );

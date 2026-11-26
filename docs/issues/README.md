@@ -35,7 +35,7 @@ One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of t
 | 73 | Issue new: draft a list of issues in full, review once, then file them in dependency order (not planned) | closed | #72 |
 | 75 | [PR status guard: block gh pr create while the closed issue's status docs are not updated](75-pr-status-guard.md) | closed | none |
 | 76 | [Ship pr and working rules: stop before a PR whose issue's status docs are not updated](76-ship-pr-status-docs.md) | closed | none |
-| 80 | [Inventory: count uses across every project and count hook decisions](80-inventory-all-projects.md) | open | none |
+| 80 | [Inventory: count uses across every project and count hook decisions](80-inventory-all-projects.md) | closed | none |
 | 81 | [Evals: run the eval suite on Linux in CI so git and gh steps are covered](81-ci-evals-linux.md) | open | none |
 | 82 | [Eval history: record pass rates per case and compare with a baseline](82-eval-history.md) | open | none |
 | 83 | [Plan: tick steps as they pass and resume a half-done plan in a new session](83-plan-resume.md) | open | none |

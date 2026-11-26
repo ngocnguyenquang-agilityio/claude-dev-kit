@@ -4,7 +4,7 @@
 // in .claude/kit.json; the rules and the memory index always print.
 import fs from "node:fs";
 import path from "node:path";
-import { baseRef, detectBaseBranch, issuesFromCommits, loadConfig, projectDir, run, scriptCommand } from "./lib.mjs";
+import { baseRef, detectBaseBranch, issuesFromCommits, loadConfig, projectDir, recordUsage, run, scriptCommand } from "./lib.mjs";
 
 const config = loadConfig();
 const sections = [fs.readFileSync(new URL("../rules/working-rules.md", import.meta.url), "utf8").trim()];
@@ -82,4 +82,5 @@ function isMergedInto(base) {
   return !firstParents.includes(head);
 }
 
+recordUsage("session-start", "fired");
 console.log(sections.join("\n\n"));
