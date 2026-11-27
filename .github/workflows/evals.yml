@@ -33,10 +33,22 @@ jobs:
             echo "::error::Add the CLAUDE_CODE_OAUTH_TOKEN repository secret (the output of claude setup-token; Settings > Secrets and variables > Actions) before running the evals."
             exit 1
           fi
+      # Shell tools run inside a sandbox; the runner image has neither bubblewrap nor socat, and
+      # Ubuntu 24.04 blocks the unprivileged user namespaces bubblewrap needs.
+      - name: Install the sandbox
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap socat
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      # TEMPORARY diagnostic for #81.
+      - name: Check the token logs in
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: claude -p "Reply with the single word OK"
       - name: Run evals
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: claude plugin eval plugins/dev-kit --scaffold --allow-tools Bash Edit Write --ablation none --judge-model sonnet --trust-plugin --no-publish
+        run: claude plugin eval plugins/dev-kit --scaffold --allow-tools Bash Edit Write --ablation none --judge-model sonnet --trust-plugin --no-publish --case ship-commit --runs 1
       # The cases run with a shell, so a session could print its environment, and an artifact
       # is readable by anyone who can read the repository. Drop the report rather than leak the key.
       - name: Refuse to upload a report that holds a credential
