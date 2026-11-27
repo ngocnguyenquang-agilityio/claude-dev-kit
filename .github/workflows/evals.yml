@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 20
       # Pinned so a new Claude Code release cannot turn a green build red on its own.
-      - run: npm install --global @anthropic-ai/claude-code@2.1.314
+      - run: npm install --global @anthropic-ai/claude-code@2.1.322
       # Fail early with a clear message instead of an opaque auth error mid-run.
       - name: Check CLAUDE_CODE_OAUTH_TOKEN is set
         env:
