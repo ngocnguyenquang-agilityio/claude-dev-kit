@@ -24,7 +24,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { baseRef, binaryName, commandIndex, commandSegments, detectBaseBranch, loadConfig, projectDir, readStdinJson, recordUsage, run } from "./lib.mjs";
+import { baseRef, binaryName, commandIndex, commandSegments, detectBaseBranch, loadConfig, projectDir, readStdinJson, recordUsage, run, SECRET_CONTENT } from "./lib.mjs";
 
 const SECRET_NAME = [
   /^\.env(\..+)?$/,
@@ -43,18 +43,6 @@ const SECRET_SUFFIX = /(^|\/)\.docker\/config\.json$/;
 // holds settings Claude may need to edit.
 const HOME_PREFIX = /^(~|\$home|\$\{home\}|\$env:(home|userprofile)|\$\{env:(home|userprofile)\}|%userprofile%)\//;
 const HOME_NPMRC = toSlashes(path.join(os.homedir(), ".npmrc"));
-
-// Values that grant access, found in text written to the memory store. A
-// placeholder such as `sk_test_<REDACTED>` or `user:$PASSWORD@` does not match.
-const SECRET_CONTENT = [
-  /(?<![A-Za-z0-9])[spr]k_(live|test)_[A-Za-z0-9]{8,}/,
-  /\bAKIA[0-9A-Z]{16}\b/,
-  /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}/,
-  /\bgithub_pat_[A-Za-z0-9_]{20,}/,
-  /\bxox[abpr]-[A-Za-z0-9-]{10,}/,
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-  /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:[^\s@/<$*][^\s@/]*@/i,
-];
 
 function toSlashes(raw) {
   return raw.replace(/\\/g, "/").toLowerCase();

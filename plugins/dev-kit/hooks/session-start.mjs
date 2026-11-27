@@ -4,7 +4,7 @@
 // in .claude/kit.json; the rules and the memory index always print.
 import fs from "node:fs";
 import path from "node:path";
-import { baseRef, detectBaseBranch, issuesFromCommits, loadConfig, projectDir, recordUsage, run, scriptCommand } from "./lib.mjs";
+import { baseRef, detectBaseBranch, isHookMade, issuesFromCommits, loadConfig, projectDir, recordUsage, run, scriptCommand, wipNoteName } from "./lib.mjs";
 
 const config = loadConfig();
 const sections = [fs.readFileSync(new URL("../rules/working-rules.md", import.meta.url), "utf8").trim()];
@@ -28,7 +28,7 @@ if (config.sessionStart.context) {
   if (config.issuesDir) lines.push(`- Issue specs: ${config.issuesDir}/`);
   lines.push(...planLines(branch, baseBranch));
 
-  const noteName = branch && `.claude/wip/${branch.replaceAll("/", "-")}.md`;
+  const noteName = branch && wipNoteName(branch);
   const note = noteName && path.join(projectDir, noteName);
   if (note && fs.existsSync(note)) {
     const base = branch !== baseBranch && baseRef(baseBranch);
@@ -38,6 +38,9 @@ if (config.sessionStart.context) {
       const text = fs.readFileSync(note, "utf8").trim();
       const warning = staleWarning(noteSha(text));
       lines.push("", "### Handoff note for this branch (from the previous session)", ...(warning ? [`> ${warning}`, ""] : []), text);
+      if (isHookMade(text)) {
+        lines.push("", "> This note holds only an automatic State (written by a hook). Run /dev-kit:handoff for a full note.");
+      }
     }
   }
   sections.push(lines.join("\n"));
@@ -88,10 +91,11 @@ function staleMemory(indexText) {
   return [...new Set(stale)];
 }
 
-// The sha from the note's `HEAD <sha>` State line. Only hex passes: the note is
-// a file anyone can edit, and the sha goes to git without asking.
+// The sha from the note's `HEAD <sha>` State line, never from an `Auto:` line.
+// Only hex passes: the note is a file anyone can edit, and the sha goes to git
+// without asking.
 function noteSha(text) {
-  return [...text.matchAll(/\bHEAD ([0-9a-f]{7,40})\b/g)].at(-1)?.[1];
+  return [...text.matchAll(/^HEAD ([0-9a-f]{7,40})\b/gm)].at(-1)?.[1];
 }
 
 function staleWarning(sha) {

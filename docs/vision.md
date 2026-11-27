@@ -25,7 +25,7 @@ Quality workflow:
 Session memory:
 
 - Skill: `handoff`
-- Hooks: SessionStart (loads the working rules, the checks, the memory index `docs/memory.md` and the branch's handoff note), Context nudge (once per session, asks you to run `handoff` when the context is nearly full)
+- Hooks: SessionStart (loads the working rules, the checks, the memory index `docs/memory.md` and the branch's handoff note), Context nudge (once per session, asks you to run `handoff` when the context is nearly full), session-state (on `SessionEnd` and `PreCompact`, writes or updates the branch's note in `.claude/wip/` with the commits and dirty file names, so a session closed without `handoff` still leaves a trail)
 - Memory store: the index `docs/memory.md` and topic files `docs/memory/<topic>.md`, written by Claude under the working rules and read on demand
 
 Safety guard:
