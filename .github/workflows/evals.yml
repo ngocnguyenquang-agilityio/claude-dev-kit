@@ -1,9 +1,6 @@
 name: Evals
 
 on:
-  # TEMPORARY: lets #81 run this workflow before it exists on main. Remove before merging.
-  push:
-    branches: [feat/ci-evals-linux]
   workflow_dispatch:
   schedule:
     # Weekly, Monday 06:00 UTC. The suite calls the API, so it does not run on every push.
@@ -23,7 +20,7 @@ jobs:
         with:
           node-version: 20
       # Pinned so a new Claude Code release cannot turn a green build red on its own.
-      - run: npm install --global @anthropic-ai/claude-code@2.1.322
+      - run: npm install --global @anthropic-ai/claude-code@2.1.314
       # Fail early with a clear message instead of an opaque auth error mid-run.
       - name: Check CLAUDE_CODE_OAUTH_TOKEN is set
         env:
@@ -34,38 +31,17 @@ jobs:
             exit 1
           fi
       # Shell tools run inside a sandbox; the runner image has neither bubblewrap nor socat, and
-      # Ubuntu 24.04 blocks the unprivileged user namespaces bubblewrap needs.
+      # Ubuntu 24.04 blocks the unprivileged user namespaces bubblewrap needs. Kept as an attempted fix
+      # for #81: each case still refuses Bash with apply-seccomp, whether or not these are installed.
       - name: Install the sandbox
         run: |
           sudo apt-get update
           sudo apt-get install -y bubblewrap socat
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      # TEMPORARY diagnostic for #81.
-      - name: Check the token logs in
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: claude -p "Reply with the single word OK"
-      # TEMPORARY diagnostic for #81: why the sandbox helper fails with "Permission denied".
-      - name: Diagnose the sandbox
-        continue-on-error: true
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          set +e
-          echo "--- kernel / userns"
-          uname -r
-          sysctl kernel.apparmor_restrict_unprivileged_userns kernel.unprivileged_userns_clone user.max_user_namespaces
-          unshare -U true && echo "unshare -U ok" || echo "unshare -U failed"
-          bwrap --version
-          bwrap --ro-bind / / true && echo "bwrap ok" || echo "bwrap failed"
-          echo "--- seccomp helper files"
-          find "$(npm root -g)/@anthropic-ai/claude-code" -iname '*seccomp*' -exec ls -l {} \;
-          echo "--- a Bash call through claude"
-          claude -p "Run the shell command: git --version. Then print the exact, complete output or error text you got, unchanged." --allowedTools Bash
       - name: Run evals
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: claude plugin eval plugins/dev-kit --scaffold --allow-tools Bash Edit Write --ablation none --judge-model sonnet --trust-plugin --no-publish --case ship-commit --runs 1
+        run: claude plugin eval plugins/dev-kit --scaffold --allow-tools Bash Edit Write --ablation none --judge-model sonnet --trust-plugin --no-publish
       # The cases run with a shell, so a session could print its environment, and an artifact
       # is readable by anyone who can read the repository. Drop the report rather than leak the key.
       - name: Refuse to upload a report that holds a credential
