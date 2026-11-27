@@ -8,3 +8,4 @@
 - Evals on Windows have no shell, so `plan` cannot run a step's Done when check: it implements the first open step, does not tick it and stops. Grade what it spawns, not ticks or later steps (#83).
 - `node --test tests/` fails on Node 24 for Windows (the directory is read as a file to run); fixtures use plain `node --test` (#83).
 - Record each eval run's `aggregate-result.json` with `node scripts/eval-history.mjs record` and compare it against the base with `compare --base main`, instead of keeping only prose counts in the changelog. Commit the change first: `record` refuses a dirty tree, since evals run before the commit would otherwise be stamped with the base's commit (#82).
+- A case lists `Bash` in `allowed_tools`; whether it takes effect depends on `--allow-tools Bash` at the run, so one case file serves Windows (no grant) and Linux CI (grant). The fixtures have no `origin` remote, so prompts tell the session a failed `git fetch origin` is expected (#81).

@@ -1,6 +1,6 @@
 ---
 max_turns: 15
-allowed_tools: [Read, Glob, Grep, Skill]
+allowed_tools: [Read, Glob, Grep, Skill, Bash]
 ---
 
 /dev-kit:ship commit 12

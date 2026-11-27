@@ -4,6 +4,8 @@
 
 Pillar 1 (quality workflow). Evals run on Windows have no shell, so almost every eval's Limits say the git and `gh` steps are not covered (`ship pr`, `issue start`, the implementer's Done when checks), and the `no-git-write` grader cannot fail. Run the eval suite on Linux in CI, where `Bash` can be granted, so those steps get real coverage.
 
+Plan: [2026-11-27-ci-evals-linux.md](../plans/2026-11-27-ci-evals-linux.md)
+
 ## Tasks
 
 - [ ] `.github/workflows/evals.yml`: an `ubuntu-latest` job on `workflow_dispatch` (optionally a weekly `schedule`), with `claude-code` pinned like `ci.yml`, running `claude plugin eval plugins/dev-kit --scaffold --allow-tools Bash Edit Write --ablation none --judge-model sonnet`
