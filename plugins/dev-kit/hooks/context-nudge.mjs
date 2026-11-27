@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { loadConfig, projectDir, readStdinJson, recordUsage, run } from "./lib.mjs";
+import { isHookMade, loadConfig, projectDir, readStdinJson, recordUsage, run, wipNoteName } from "./lib.mjs";
 
 // Context size is everything the last reply read: fresh input plus the cache.
 // Looked for from the end of the transcript, which is one JSON object per line.
@@ -48,11 +48,14 @@ try {
   if (tokens === null || tokens < config.contextWarnTokens) process.exit(0);
 
   const branch = run(["git", "branch", "--show-current"]).output;
-  const note = branch && `.claude/wip/${branch.replaceAll("/", "-")}.md`;
+  const note = branch && wipNoteName(branch);
   // A note written during this session already holds what the next one needs.
+  // A hook-made note holds only the State, so it does not count.
   const started = firstTimestamp(lines);
-  if (note && started !== null && fs.existsSync(path.join(projectDir, note))) {
-    if (fs.statSync(path.join(projectDir, note)).mtimeMs > started) process.exit(0);
+  const notePath = note && path.join(projectDir, note);
+  if (notePath && started !== null && fs.existsSync(notePath)) {
+    const hookMade = isHookMade(fs.readFileSync(notePath, "utf8"));
+    if (!hookMade && fs.statSync(notePath).mtimeMs > started) process.exit(0);
   }
 
   // Once per session: the marker is a file named after the session.

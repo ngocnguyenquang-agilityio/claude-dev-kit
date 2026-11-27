@@ -1,0 +1,6 @@
+# Editing the safety guard
+
+- The PreToolUse safety guard is the script `plugins/dev-kit/hooks/safety-guard.mjs` (the `safety-guard` entry in the hook config), and it runs with `onFailure: block`. If it cannot load (a syntax error, a duplicate declaration, an import of a name its module does not export), every Read, Edit, Write, Grep, Bash and PowerShell call is blocked, so Claude cannot repair it. Only the user can, in their own terminal, for example `git checkout -- <the file>`.
+- Make every edit to that file, and to `lib.mjs` which it imports, leave both loadable. Move a shared constant in this order: add the export to `lib.mjs`, then change `safety-guard.mjs` in one single Edit that adds the import and removes the old declaration together. Two separate edits lock the tools between them (it happened three times in #84).
+- Do not hand the guard or `lib.mjs` to a subagent that edits by script: a run that sliced the file by an `indexOf` that returned -1 duplicated about 46 lines and broke it. Give such steps clear instructions to use Edit only, or do them in the main session.
+- The Stop hook runs the whole test suite, so it reports the same failure again on every turn until the guard loads.

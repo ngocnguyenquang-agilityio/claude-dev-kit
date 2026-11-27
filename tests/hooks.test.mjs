@@ -1178,6 +1178,42 @@ describe("session-start", () => {
       assert.match(out, /already merged into origin\/main/);
     });
 
+    it("takes the sha from the State line, not from an Auto line", () => {
+      const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+      const head = git(project, "rev-parse", "--short", "HEAD");
+      git(project, "commit", "-q", "--allow-empty", "-m", "feat(#3): more");
+      const newer = git(project, "rev-parse", "--short", "HEAD");
+      writeNote(project, `HEAD ${head} · 0 dirty files\nAuto: HEAD ${newer} · 2 dirty files`);
+
+      const { out } = runHook("session-start.mjs", project);
+
+      assert.match(out, new RegExp(`Note written at \`${head}\`; 1 commit since`));
+      assert.doesNotMatch(out, new RegExp(`written at \`${newer}\``));
+    });
+
+    describe("hook-made note", () => {
+      const AUTO_LINE = /holds only an automatic State/;
+
+      it("says the note holds only an automatic State", () => {
+        const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+        const head = git(project, "rev-parse", "--short", "HEAD");
+        fs.mkdirSync(path.join(project, ".claude", "wip"), { recursive: true });
+        fs.writeFileSync(
+          path.join(project, ".claude", "wip", "feat-search.md"),
+          `# WIP: feat/search\n\n## Next\n\n- run /dev-kit:handoff for a full note\n\n## State\n\nHEAD ${head} · 0 dirty files · auto\n`,
+        );
+
+        assert.match(runHook("session-start.mjs", project).out, AUTO_LINE);
+      });
+
+      it("adds no such line for a handoff note", () => {
+        const project = branchWithCommits("feat/search", ["feat(#3): add search"]);
+        noteAtHead(project);
+
+        assert.doesNotMatch(runHook("session-start.mjs", project).out, AUTO_LINE);
+      });
+    });
+
     it("still loads the note of a new branch with no commits of its own", () => {
       const project = branchWithCommits("feat/search", [], ["base work"]);
       noteAtHead(project);
@@ -1689,6 +1725,18 @@ describe("context-nudge", () => {
     assert.equal(prompt(project, transcript(project, long()), sessionId()).out, "");
   });
 
+  it("still nudges when the branch note was made by a hook", () => {
+    const project = makeProject({}, { git: true });
+    const branch = spawnSync("git", ["branch", "--show-current"], { cwd: project, encoding: "utf8" }).stdout.trim();
+    fs.mkdirSync(path.join(project, ".claude", "wip"), { recursive: true });
+    fs.writeFileSync(
+      path.join(project, ".claude", "wip", `${branch.replaceAll("/", "-")}.md`),
+      "## Next\n\n- run /dev-kit:handoff for a full note\n",
+    );
+
+    assert.match(JSON.parse(prompt(project, transcript(project, long()), sessionId()).out).systemMessage, /\/dev-kit:handoff/);
+  });
+
   describe("usage log", () => {
     const usage = (project) =>
       fs.readFileSync(path.join(project, ".git", "dev-kit-usage"), "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
@@ -1703,6 +1751,245 @@ describe("context-nudge", () => {
 
       assert.deepEqual(usage(project).map(({ hook, decision }) => [hook, decision]), [["context-nudge", "nudge"]]);
     });
+  });
+});
+
+describe("session-state", () => {
+  const git = (project, ...args) => spawnSync("git", args, { cwd: project, encoding: "utf8" }).stdout.trim();
+  // branchWithCommits leaves its package.json untracked; drop it so only the
+  // files a test creates count as dirty.
+  const cleanBranch = (...args) => {
+    const project = branchWithCommits(...args);
+    fs.rmSync(path.join(project, "package.json"));
+    return project;
+  };
+  const noteOf = (project, name) => path.join(project, ".claude", "wip", name);
+  const AUTO_NEXT = "- run /dev-kit:handoff for a full note";
+  const handoffNote = (sha) =>
+    [
+      "# WIP: feat/x - 2026-01-01 10:00",
+      "",
+      "## Done",
+      "",
+      "- wrote the parser",
+      "",
+      "## Next",
+      "",
+      "- add tests",
+      "",
+      "## State",
+      "",
+      `HEAD ${sha} · 0 dirty files · checks: pass · skills to use next: none`,
+      "",
+    ].join("\n");
+
+  it("creates the note on a feature branch with commits and dirty files", () => {
+    const project = cleanBranch("feat/x", ["feat(#7): first", "fix(#7): second"]);
+    fs.writeFileSync(path.join(project, "a.txt"), "secret body text");
+    fs.writeFileSync(path.join(project, "b.txt"), "more");
+
+    const { code, out } = runHook("session-state.mjs", project, { hook_event_name: "SessionEnd" });
+    const note = fs.readFileSync(noteOf(project, "feat-x.md"), "utf8");
+
+    assert.equal(code, 0);
+    assert.equal(out, "");
+    assert.match(note, /^# WIP: feat\/x \(#7\) - \d{4}-\d\d-\d\d \d\d:\d\d$/m);
+    assert.match(note, /^- commit: feat\(#7\): first$/m);
+    assert.match(note, /^- commit: fix\(#7\): second$/m);
+    assert.match(note, /^- uncommitted: a\.txt$/m);
+    assert.ok(note.split("\n").includes(AUTO_NEXT));
+    assert.ok(note.includes(`HEAD ${git(project, "rev-parse", "--short", "HEAD")} · 2 dirty files · checks: not run · skills to use next: none · auto`));
+  });
+
+  it("writes no file contents into the note", () => {
+    const project = cleanBranch("feat/x", ["feat: one"]);
+    fs.writeFileSync(path.join(project, "a.txt"), "unique-file-content-marker");
+
+    runHook("session-state.mjs", project);
+
+    assert.doesNotMatch(fs.readFileSync(noteOf(project, "feat-x.md"), "utf8"), /unique-file-content-marker/);
+  });
+
+  it("writes nothing on the base branch, on a detached HEAD or on an empty branch", () => {
+    const onBase = cleanBranch("feat/x", ["feat: one"]);
+    git(onBase, "checkout", "-q", "main");
+    fs.writeFileSync(path.join(onBase, "a.txt"), "x");
+    const detached = cleanBranch("feat/x", ["feat: one"]);
+    git(detached, "checkout", "-q", "--detach");
+    const empty = cleanBranch("feat/x", []);
+
+    for (const project of [onBase, detached, empty]) {
+      const { code, out } = runHook("session-state.mjs", project);
+      assert.equal(code, 0);
+      assert.equal(out, "");
+      assert.equal(fs.existsSync(path.join(project, ".claude", "wip")), false);
+    }
+  });
+
+  it("keeps every line of a handoff note, adds one Auto line and replaces it on the next run", () => {
+    const project = cleanBranch("feat/x", ["feat: one"]);
+    const original = handoffNote(git(project, "rev-parse", "--short", "HEAD"));
+    fs.mkdirSync(path.dirname(noteOf(project, "feat-x.md")), { recursive: true });
+    fs.writeFileSync(noteOf(project, "feat-x.md"), original);
+    const old = new Date("2026-01-01T10:00:00Z");
+    fs.utimesSync(noteOf(project, "feat-x.md"), old, old);
+
+    runHook("session-state.mjs", project);
+    fs.writeFileSync(path.join(project, "a.txt"), "x");
+    runHook("session-state.mjs", project);
+    const lines = fs.readFileSync(noteOf(project, "feat-x.md"), "utf8").split("\n");
+    const sha = git(project, "rev-parse", "--short", "HEAD");
+
+    assert.equal(lines.filter((line) => line.startsWith("Auto:")).length, 1);
+    assert.equal(lines[lines.findIndex((line) => line.startsWith("HEAD ")) + 1], `Auto: HEAD ${sha} · 1 dirty files`);
+    assert.deepEqual(
+      lines.filter((line) => !line.startsWith("Auto:")),
+      original.split("\n"),
+    );
+    assert.equal(fs.statSync(noteOf(project, "feat-x.md")).mtimeMs, old.getTime());
+  });
+
+  it("appends the Auto line to a handoff note with no State heading", () => {
+    const project = cleanBranch("feat/x", ["feat: one"]);
+    fs.mkdirSync(path.dirname(noteOf(project, "feat-x.md")), { recursive: true });
+    fs.writeFileSync(noteOf(project, "feat-x.md"), "# WIP\n\n- hand written\n");
+
+    runHook("session-state.mjs", project);
+
+    assert.match(fs.readFileSync(noteOf(project, "feat-x.md"), "utf8"), /^# WIP\n\n- hand written\nAuto: HEAD \w+ · 0 dirty files\n$/);
+  });
+
+  it("rewrites a hook-made note when new commits arrive", () => {
+    const project = cleanBranch("feat/x", ["feat: one"]);
+    runHook("session-state.mjs", project);
+    git(project, "commit", "-q", "--allow-empty", "-m", "feat: later");
+
+    runHook("session-state.mjs", project);
+    const note = fs.readFileSync(noteOf(project, "feat-x.md"), "utf8");
+
+    assert.match(note, /^- commit: feat: later$/m);
+    assert.ok(note.includes(`HEAD ${git(project, "rev-parse", "--short", "HEAD")} `));
+    assert.equal(note.split("\n").filter((line) => line.startsWith("## State")).length, 1);
+  });
+
+  it("lists a staged rename by its new name only", () => {
+    const project = cleanBranch("feat/x", []);
+    fs.writeFileSync(path.join(project, "old.txt"), "same content\n");
+    git(project, "add", "old.txt");
+    git(project, "commit", "-q", "-m", "feat: add old");
+    git(project, "mv", "old.txt", "new.txt");
+
+    runHook("session-state.mjs", project);
+    const note = fs.readFileSync(noteOf(project, "feat-x.md"), "utf8");
+
+    assert.equal(note.split("\n").filter((line) => line.startsWith("- uncommitted: ")).length, 1);
+    assert.match(note, /^- uncommitted: new\.txt$/m);
+    assert.doesNotMatch(note, /old\.txt$/m);
+    assert.match(note, /· 1 dirty files ·/);
+  });
+
+  it("keeps a CRLF handoff note in CRLF with one Auto line", () => {
+    const project = cleanBranch("feat/x", ["feat: one"]);
+    const original = handoffNote(git(project, "rev-parse", "--short", "HEAD")).replaceAll("\n", "\r\n");
+    fs.mkdirSync(path.dirname(noteOf(project, "feat-x.md")), { recursive: true });
+    fs.writeFileSync(noteOf(project, "feat-x.md"), original);
+
+    runHook("session-state.mjs", project);
+    runHook("session-state.mjs", project);
+    const text = fs.readFileSync(noteOf(project, "feat-x.md"), "utf8");
+    const lines = text.split("\r\n");
+
+    assert.equal(text.replaceAll("\r\n", "").includes("\n"), false);
+    assert.equal(lines.filter((line) => line.startsWith("Auto:")).length, 1);
+    assert.deepEqual(
+      lines.filter((line) => !line.startsWith("Auto:")),
+      original.split("\r\n"),
+    );
+  });
+
+  it("treats a hook-made note saved with CRLF as hook-made", () => {
+    const project = cleanBranch("feat/x", ["feat: one"]);
+    runHook("session-state.mjs", project);
+    const file = noteOf(project, "feat-x.md");
+    fs.writeFileSync(file, fs.readFileSync(file, "utf8").replaceAll("\n", "\r\n"));
+    git(project, "commit", "-q", "--allow-empty", "-m", "feat: later");
+
+    runHook("session-state.mjs", project);
+    const note = fs.readFileSync(file, "utf8");
+
+    assert.match(note, /^- commit: feat: later$/m);
+    assert.doesNotMatch(note, /^Auto:/m);
+    assert.equal(note.includes("\r"), false);
+  });
+
+  it("still writes a note, with no commits, when the repo has no base branch ref", () => {
+    const project = cleanBranch("feat/x", ["feat: one"]);
+    git(project, "branch", "-m", "main", "trunk");
+    fs.writeFileSync(path.join(project, "a.txt"), "x");
+
+    const { code } = runHook("session-state.mjs", project);
+    const note = fs.readFileSync(noteOf(project, "feat-x.md"), "utf8");
+
+    assert.equal(code, 0);
+    assert.doesNotMatch(note, /^- commit: /m);
+    assert.match(note, /^- uncommitted: a\.txt$/m);
+  });
+
+  it("rewrites a hook-made note to say nothing is left once its commits and files are gone", () => {
+    const project = cleanBranch("feat/x", ["feat: one"]);
+    fs.writeFileSync(path.join(project, "a.txt"), "x");
+    runHook("session-state.mjs", project);
+    fs.rmSync(path.join(project, "a.txt"));
+    git(project, "reset", "-q", "--hard", "main");
+
+    runHook("session-state.mjs", project);
+    const note = fs.readFileSync(noteOf(project, "feat-x.md"), "utf8");
+
+    assert.match(note, /^- nothing committed or changed yet$/m);
+    assert.doesNotMatch(note, /^- (commit|uncommitted): /m);
+  });
+
+  it("replaces a token-like subject and file name with <REDACTED>", () => {
+    const token = "ghp_abcdefghijklmnopqrstuvwxyz0123";
+    const project = cleanBranch("feat/x", [`feat: use ${token}`]);
+    fs.writeFileSync(path.join(project, `${token}.txt`), "x");
+
+    runHook("session-state.mjs", project);
+    const note = fs.readFileSync(noteOf(project, "feat-x.md"), "utf8");
+
+    assert.doesNotMatch(note, /ghp_/);
+    assert.match(note, /^- commit: feat: use <REDACTED>$/m);
+    assert.match(note, /^- uncommitted: <REDACTED>\.txt$/m);
+  });
+
+  it("lists at most 10 commits and 10 files, then how many more", () => {
+    const project = cleanBranch("feat/x", Array.from({ length: 12 }, (_, index) => `feat: commit ${index}`));
+    for (let index = 0; index < 13; index++) fs.writeFileSync(path.join(project, `f${index}.txt`), "x");
+
+    runHook("session-state.mjs", project);
+    const note = fs.readFileSync(noteOf(project, "feat-x.md"), "utf8");
+
+    assert.equal(note.split("\n").filter((line) => line.startsWith("- commit: ")).length, 10);
+    assert.equal(note.split("\n").filter((line) => line.startsWith("- uncommitted: ")).length, 10);
+    assert.match(note, /^- \+2 more$/m);
+    assert.match(note, /^- \+3 more$/m);
+    assert.match(note, /· 13 dirty files ·/);
+  });
+
+  it("cuts a long subject at 100 characters", () => {
+    const project = cleanBranch("feat/x", [`feat: ${"y".repeat(200)}`]);
+
+    runHook("session-state.mjs", project);
+
+    assert.ok(fs.readFileSync(noteOf(project, "feat-x.md"), "utf8").includes(`- commit: feat: ${"y".repeat(94)}\n`));
+  });
+
+  it("turns a slash in the branch name into a dash in the note path", () => {
+    const project = cleanBranch("fix/deep/name", ["fix: one"]);
+
+    runHook("session-state.mjs", project);
+
+    assert.equal(fs.existsSync(noteOf(project, "fix-deep-name.md")), true);
   });
 });
 
@@ -1732,5 +2019,12 @@ describe("hooks.json", () => {
 
   it("runs only stop-checks on Stop, so a failing check sends no parallel notification", () => {
     assert.deepEqual(handlers("Stop").map(script), ["stop-checks.mjs"]);
+  });
+
+  it("runs session-state on SessionEnd and PreCompact", () => {
+    for (const event of ["SessionEnd", "PreCompact"]) {
+      assert.deepEqual(handlers(event).map(script), ["session-state.mjs"], event);
+    }
+    assert.ok(fs.existsSync(path.join(hooksDir, "session-state.mjs")));
   });
 });

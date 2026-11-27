@@ -216,6 +216,33 @@ const SCRIPT_NAMES = {
   formatCheck: ["format:check", "format-check", "check-format"],
 };
 
+
+// Values that grant access, found in text written to the memory store or to a
+// session note. A placeholder such as `sk_test_<REDACTED>` or `user:$PASSWORD@`
+// does not match.
+export const SECRET_CONTENT = [
+  /(?<![A-Za-z0-9])[spr]k_(live|test)_[A-Za-z0-9]{8,}/,
+  /\bAKIA[0-9A-Z]{16}\b/,
+  /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}/,
+  /\bgithub_pat_[A-Za-z0-9_]{20,}/,
+  /\bxox[abpr]-[A-Za-z0-9-]{10,}/,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+  /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:[^\s@/<$*][^\s@/]*@/i,
+];
+
+// The handoff note for a branch; slashes would nest it in a directory.
+export function wipNoteName(branch) {
+  return `.claude/wip/${branch.replaceAll("/", "-")}.md`;
+}
+
+// The Next line session-state.mjs writes in a note it made itself.
+export const AUTO_NEXT = "- run /dev-kit:handoff for a full note";
+
+// A note with the AUTO_NEXT line holds only the hook's State, whatever its line endings.
+export function isHookMade(text) {
+  return text.split("\n").some((line) => line.trimEnd() === AUTO_NEXT);
+}
+
 // `<type>/<slug>`. The issue number is not in the branch name; it comes from
 // the branch's commits (see issuesFromCommits).
 export const BRANCH_PATTERN = /^(feat|fix|chore|docs|test|refactor)\/(.+)$/;
