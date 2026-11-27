@@ -45,6 +45,23 @@ jobs:
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: claude -p "Reply with the single word OK"
+      # TEMPORARY diagnostic for #81: why the sandbox helper fails with "Permission denied".
+      - name: Diagnose the sandbox
+        continue-on-error: true
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          set +e
+          echo "--- kernel / userns"
+          uname -r
+          sysctl kernel.apparmor_restrict_unprivileged_userns kernel.unprivileged_userns_clone user.max_user_namespaces
+          unshare -U true && echo "unshare -U ok" || echo "unshare -U failed"
+          bwrap --version
+          bwrap --ro-bind / / true && echo "bwrap ok" || echo "bwrap failed"
+          echo "--- seccomp helper files"
+          find "$(npm root -g)/@anthropic-ai/claude-code" -iname '*seccomp*' -exec ls -l {} \;
+          echo "--- a Bash call through claude"
+          claude -p "Run the shell command: git --version. Then print the exact, complete output or error text you got, unchanged." --allowedTools Bash
       - name: Run evals
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
