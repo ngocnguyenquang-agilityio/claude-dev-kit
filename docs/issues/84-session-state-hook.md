@@ -26,4 +26,4 @@ Pillar 2 (session memory). `handoff` runs only when the user types it (`disable-
 
 ## Depends on
 
-none
+#85. It changes the same files (`plugins/dev-kit/hooks/session-start.mjs` and `tests/hooks.test.mjs`), so it starts after #85 is merged.

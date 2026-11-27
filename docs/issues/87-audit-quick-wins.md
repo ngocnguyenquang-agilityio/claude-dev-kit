@@ -27,4 +27,4 @@ Clear the open items of `docs/audit-backlog.md` that are small and settled: A14,
 
 ## Depends on
 
-#84
+#84. A20 makes one helper compute the `wipNote` name, which #84's session-state hook also computes, so it starts after #84 is merged.

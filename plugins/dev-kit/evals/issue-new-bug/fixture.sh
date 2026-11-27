@@ -21,14 +21,6 @@ export function toCsv(rows) {
 JS
 
 mkdir -p docs/issues
-cat > docs/issues/README.md <<'MD'
-# Issues
-
-| # | Title | Status | Depends on |
-|---|---|---|---|
-| 4 | [Add a date column to the export](04-export-date-column.md) | closed | none |
-MD
-
 cat > docs/issues/04-export-date-column.md <<'MD'
 # Add a date column to the export
 

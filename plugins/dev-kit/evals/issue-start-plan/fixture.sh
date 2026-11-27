@@ -50,16 +50,6 @@ greeter bye Ada     # Goodbye, Ada.
 ```
 MD
 
-cat > docs/issues/README.md <<'MD'
-# Issues
-
-One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of truth; these files hold the task checklist that `/dev-kit:issue finish` ticks.
-
-| # | Title | Status | Depends on |
-|---|---|---|---|
-| 12 | [Add a shout mode that upper-cases greetings](12-shout-mode.md) | open | none |
-MD
-
 cat > docs/issues/12-shout-mode.md <<'MD'
 # Add a shout mode that upper-cases greetings
 

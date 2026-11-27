@@ -13,9 +13,9 @@ With `issuesDir` set, the project keeps an issue file per issue and step 6 write
    - **Tasks**: `- [ ]` checkboxes, each small enough for one sitting. Name files and functions when you know them.
    - **Acceptance criteria**: observable checks. For a bug, start with a regression test that fails before the fix and passes after. End with the project's checks from the config.
    - **Out of scope**: what this issue leaves alone, so the work does not grow. `none` when nothing is close.
-   - **Depends on**: `#N` references, or `none`.
+   - **Depends on**: `#N` references, each with the reason it comes first (for example "same files as #N"), or `none`.
 4. **Review.** Show the user the title, the draft and the labels, and wait for edits or a yes. Nothing goes to GitHub or into the repo before that.
-5. **Create on GitHub.** After an explicit yes, write the draft to a file in the system temp folder and run `gh issue create --title "<title>" --body-file <file>`. Add `--label <name>` for each label. When Depends on names issues and `gh issue create --help` lists `--blocked-by`, add `--blocked-by <numbers>`. The command prints the issue URL; the number at its end is `N`. Then delete the temp file.
-6. **Issue file and index.** Write the issue file with `# <title>` followed by the draft, using `N` from step 5. If the index has a table of issues, add a row for this one with the status the table uses for open issues, and update its "Order" line if the dependency order changed.
+5. **Create on GitHub.** After an explicit yes, write the draft to a file in the system temp folder and run `gh issue create --title "<title>" --body-file <file>`. Add `--label <name>` for each label. When Depends on names issues, add `--blocked-by <numbers>`, the numbers taken from the `#N` references; if `gh issue create --help` does not list `--blocked-by`, tell the user instead of skipping it silently. The command prints the issue URL; the number at its end is `N`. Then delete the temp file.
+6. **Issue file.** Write the issue file with `# <title>` followed by the draft, using `N` from step 5.
 
-Creating the issue is the end of this mode. The issue file and the index stay uncommitted. `/dev-kit:issue start <N>` carries them onto the issue branch, where they are committed with the work.
+Creating the issue is the end of this mode. The issue file stays uncommitted. `/dev-kit:issue start <N>` carries it onto the issue branch, where it is committed with the work.
