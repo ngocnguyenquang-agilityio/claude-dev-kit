@@ -19,7 +19,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PLUGIN_PREFIX = "dev-kit:";
-const GUARD_HOOKS = ["safety-guard", "pr-status-guard", "package-manager-guard"];
+const GUARD_HOOKS = ["safety-guard", "package-manager-guard"];
 
 function option(name, fallback) {
   const index = process.argv.indexOf(name);

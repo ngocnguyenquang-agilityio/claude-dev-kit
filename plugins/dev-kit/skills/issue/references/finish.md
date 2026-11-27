@@ -6,8 +6,8 @@ Bring the current `<type>/<slug>` branch to a ready-to-commit state. You commit,
    - **Type**: `branch.type` from the config. If it is `null` (the branch isn't `<type>/<slug>`), ask the user for the type.
    - **Issue `N`**: follow `issue-number.md`.
    - With `N`, read the issue: the issue file when `issuesDir` is set, else `gh issue view N`. With no issue, there are no status docs: skip step 4.
-   - If you started this mode on your own (the user didn't type `/dev-kit:issue finish`) and there is an issue, confirm with the user that it is done before going on, because step 4 marks it closed.
-   - **PR state**: run `gh pr view --json state`. "no pull requests found" or `CLOSED` means no PR yet. `OPEN` means the new commit goes in by push only, with no `gh pr create`. `MERGED` means this branch is done and any new commit would need a second PR: stop. Tell the user to start a new branch from `<baseBranch>` for further work, and that the issue's tick and status cell can ride in that branch's first commit.
+   - If you started this mode on your own (the user didn't type `/dev-kit:issue finish`) and there is an issue, confirm with the user that it is done before going on, because step 4 ticks its tasks.
+   - **PR state**: run `gh pr view --json state`. "no pull requests found" or `CLOSED` means no PR yet. `OPEN` means the new commit goes in by push only, with no `gh pr create`. `MERGED` means this branch is done and any new commit would need a second PR: stop. Tell the user to start a new branch from `<baseBranch>` for further work, and that the issue's ticks can ride in that branch's first commit.
 2. **Checks green.** Run every command under `checks` in the config. Done when all pass. Fix failures before going on. A check that is `null` doesn't exist here: say "not verified" for it in the report.
 3. **Review.** Run the `review` skill with the issue number, if there is one, unless it already ran on this same diff. It spawns the `reviewer` agent, which reviews uncommitted and untracked work against the merge-base with `origin/<baseBranch>`.
    - Fix every Block and Should fix item, except Scope items, which wait for the user's decision.
@@ -15,7 +15,6 @@ Bring the current `<type>/<slug>` branch to a ready-to-commit state. You commit,
    - Keep the Nits for the report.
 4. **Status docs.** Only with an issue, and when `issuesDir` is set.
    - In the issue file, tick `[x]` every task the diff actually completes. Leave the others unchecked and list them for the user.
-   - If the index has a status cell for this issue, set it to the "closed" value the table already uses for finished issues.
 5. **Report.** Show the user:
    - The review: Block and Should fix items fixed, Scope items waiting for the user's decision, and the Nits and Follow-ups still open.
    - The check results.

@@ -25,5 +25,4 @@ When a mode file says "the `start` mode's step N", it means that step of `refere
 Terms used in every mode file:
 
 - **Issue file**: `<issuesDir>/<NN>-<slug>.md`, the issue's spec with its task checkboxes. `NN` is the number zero-padded to two digits; find an existing one by `<issuesDir>/<NN>-*.md`. Only exists when `issuesDir` is set.
-- **Index**: `<issuesDir>/README.md`, the table of issues with a status cell per issue.
-- **Status docs**: the issue file's ticked tasks plus the issue's status cell in the index.
+- **Status docs**: the issue file's ticked tasks.

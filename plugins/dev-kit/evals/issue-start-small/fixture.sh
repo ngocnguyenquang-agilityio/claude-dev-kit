@@ -34,16 +34,6 @@ test("finds a user by id", () => {
 });
 JS
 
-cat > docs/issues/README.md <<'MD'
-# Issues
-
-One file per GitHub issue: `<NN>-<slug>.md`. The GitHub issue is the source of truth; these files hold the task checklist that `/dev-kit:issue finish` ticks.
-
-| # | Title | Status | Depends on |
-|---|---|---|---|
-| 14 | [Rename getUser to fetchUser](14-rename-get-user.md) | open | none |
-MD
-
 cat > docs/issues/14-rename-get-user.md <<'MD'
 # Rename getUser to fetchUser
 
