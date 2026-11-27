@@ -1,6 +1,6 @@
 ---
 max_turns: 40
-allowed_tools: [Read, Glob, Grep, Skill, Agent, Write, Edit]
+allowed_tools: [Read, Glob, Grep, Skill, Agent, Write, Edit, Bash]
 ---
 
 Before writing any code, plan this change for the greeter CLI in this folder, then implement the plan. I approve the plan in advance, so go straight from the plan to the work without waiting for my yes.

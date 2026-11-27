@@ -1,0 +1,61 @@
+name: Evals
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly, Monday 06:00 UTC. The suite calls the API, so it does not run on every push.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    # About 35 cases x 3 runs, each a full Claude Code session.
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Pinned so a new Claude Code release cannot turn a green build red on its own.
+      - run: npm install --global @anthropic-ai/claude-code@2.1.314
+      # Fail early with a clear message instead of an opaque auth error mid-run.
+      - name: Check CLAUDE_CODE_OAUTH_TOKEN is set
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "::error::Add the CLAUDE_CODE_OAUTH_TOKEN repository secret (the output of claude setup-token; Settings > Secrets and variables > Actions) before running the evals."
+            exit 1
+          fi
+      # Shell tools run inside a sandbox; the runner image has neither bubblewrap nor socat, and
+      # Ubuntu 24.04 blocks the unprivileged user namespaces bubblewrap needs. Kept as an attempted fix
+      # for #81: each case still refuses Bash with apply-seccomp, whether or not these are installed.
+      - name: Install the sandbox
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap socat
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      - name: Run evals
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: claude plugin eval plugins/dev-kit --scaffold --allow-tools Bash Edit Write --ablation none --judge-model sonnet --trust-plugin --no-publish
+      # The cases run with a shell, so a session could print its environment, and an artifact
+      # is readable by anyone who can read the repository. Drop the report rather than leak the key.
+      - name: Refuse to upload a report that holds a credential
+        if: always()
+        run: |
+          if grep -rqE 'sk-ant-' plugins/dev-kit/evals/results; then
+            echo "::error::An eval report contains what looks like a credential. Not uploading it; revoke and recreate the CLAUDE_CODE_OAUTH_TOKEN secret."
+            rm -rf plugins/dev-kit/evals/results
+            exit 1
+          fi
+      # Always upload, so a failed run still leaves its partial results to inspect.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: plugins/dev-kit/evals/results/**/aggregate-result.json
+          if-no-files-found: warn
