@@ -883,12 +883,70 @@ describe("session-start", () => {
   });
 
   it("includes the memory index", () => {
-    const project = makeProject({ "docs/memory.md": "- [Staging](memory/staging.md): read before touching staging data." }, { git: true });
+    const project = makeProject(
+      { "docs/memory.md": "- [Staging](memory/staging.md): read before touching staging data.", "docs/memory/staging.md": "Staging is reset nightly." },
+      { git: true },
+    );
 
     const { code, out } = runHook("session-start.mjs", project);
 
     assert.equal(code, 0);
     assert.match(out, /## Project memory \(docs\/memory\.md\)\n- \[Staging\]\(memory\/staging\.md\)/);
+  });
+
+  describe("stale memory", () => {
+    const withTopic = (topic, files = {}) =>
+      makeProject({ "docs/memory.md": "- [Staging](memory/staging.md): staging notes.", "docs/memory/staging.md": topic, ...files }, { git: true });
+
+    it("names an index link whose topic file is missing", () => {
+      const project = makeProject({ "docs/memory.md": "- [Gone](memory/gone.md): moved away." }, { git: true });
+
+      assert.match(runHook("session-start.mjs", project).out, /Stale memory: .*memory\/gone\.md/);
+    });
+
+    it("names a backticked path in a topic file that does not exist", () => {
+      const out = runHook("session-start.mjs", withTopic("Seeded by `scripts/seed-old.sh`.")).out;
+
+      assert.match(out, /Stale memory: .*scripts\/seed-old\.sh.* in memory\/staging\.md/);
+    });
+
+    it("does not name paths that exist or tokens that are not file paths", () => {
+      const topic = [
+        "Real: `scripts/seed.sh`.",
+        "No slash: `seed.sh`.",
+        "No extension: `scripts/seed`.",
+        "Placeholder: `docs/memory/<topic>.md`.",
+        "Url: `https://example.com/a/b.html`.",
+      ].join("\n");
+
+      const { out } = runHook("session-start.mjs", withTopic(topic, { "scripts/seed.sh": "" }));
+
+      assert.doesNotMatch(out, /Stale memory/);
+    });
+
+    it("does not name absolute or home paths, which are not in the project", () => {
+      const { out } = runHook("session-start.mjs", withTopic("Home: `~/.config/tool/rc.json`. Absolute: `/etc/tool/rc.json`."));
+
+      assert.doesNotMatch(out, /Stale memory/);
+    });
+
+    it("lists a repeated dead path once and caps the list at 10 with a count", () => {
+      const repeated = withTopic("`scripts/old.sh` and again `scripts/old.sh`.");
+      const many = withTopic(Array.from({ length: 13 }, (_, n) => `\`scripts/old-${n}.sh\``).join(" "));
+
+      assert.equal(runHook("session-start.mjs", repeated).out.match(/scripts\/old\.sh/g).length, 1);
+      const out = runHook("session-start.mjs", many).out;
+      assert.match(out, /\(and 3 more\)/);
+      assert.doesNotMatch(out, /old-12\.sh/);
+    });
+
+    it("is silent when every link and path exists", () => {
+      assert.doesNotMatch(runHook("session-start.mjs", withTopic("Uses `docs/memory.md`.")).out, /Stale memory/);
+    });
+
+    it("is silent when there is no memory index", () => {
+      assert.doesNotMatch(runHook("session-start.mjs", makeProject({}, { git: true })).out, /Stale memory/);
+    });
   });
 
   it("prints no memory section when there is no index or it is empty", () => {

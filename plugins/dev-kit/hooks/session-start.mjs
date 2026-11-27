@@ -48,6 +48,8 @@ if (config.sessionStart.context) {
 // the handoff note, and the prune line comes well before that.
 const MEMORY_INDEX = "docs/memory.md";
 const MEMORY_WARN_CHARACTERS = 6000;
+// A rotted store must not push the index itself past the 10000-character cut.
+const MEMORY_STALE_SHOWN = 10;
 const memoryPath = path.join(projectDir, MEMORY_INDEX);
 const index = fs.existsSync(memoryPath) ? fs.readFileSync(memoryPath, "utf8").trim() : "";
 if (index) {
@@ -55,7 +57,35 @@ if (index) {
     index.length > MEMORY_WARN_CHARACTERS
       ? [`> The memory index is ${index.length} characters; merge or prune topics to keep it under ${MEMORY_WARN_CHARACTERS} (output past 10000 is cut).`, ""]
       : [];
+  const stale = staleMemory(index);
+  if (stale.length) {
+    const more = stale.length > MEMORY_STALE_SHOWN ? ` (and ${stale.length - MEMORY_STALE_SHOWN} more)` : "";
+    warning.push(`> Stale memory: ${stale.slice(0, MEMORY_STALE_SHOWN).join("; ")}${more}. Fix or drop these before trusting the entries.`, "");
+  }
   sections.push([`## Project memory (${MEMORY_INDEX})`, ...warning, index].join("\n"));
+}
+
+// Memory rots when files move. Name index links whose topic file is gone and
+// backticked paths in the topic files that no longer exist in the project.
+function staleMemory(indexText) {
+  const stale = [];
+  const skip = /[\s*<>]|^[~/]|^[a-z][a-z0-9+.-]*:/i;
+  for (const [, target] of indexText.matchAll(/\[[^\]]*\]\(([^)\s]+)\)/g)) {
+    if (target.startsWith("#") || /^[a-z][a-z0-9+.-]*:/i.test(target)) continue;
+    const file = target.split("#")[0];
+    const topic = path.join(projectDir, "docs", file);
+    if (!fs.existsSync(topic)) {
+      stale.push(`link \`${target}\` has no file`);
+      continue;
+    }
+    if (!fs.statSync(topic).isFile()) continue;
+    const text = fs.readFileSync(topic, "utf8");
+    for (const [, token] of text.matchAll(/`([^`\n]+)`/g)) {
+      if (skip.test(token) || !/\/.*\.\w+$/.test(token)) continue;
+      if (!fs.existsSync(path.join(projectDir, token))) stale.push(`\`${token}\` in ${file} does not exist`);
+    }
+  }
+  return [...new Set(stale)];
 }
 
 // The sha from the note's `HEAD <sha>` State line. Only hex passes: the note is
